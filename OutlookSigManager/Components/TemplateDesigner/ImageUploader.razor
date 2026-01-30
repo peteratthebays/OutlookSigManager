@@ -1,0 +1,105 @@
+@namespace OutlookSigManager.Components.TemplateDesigner
+@using OutlookSigManager.Models
+@inject IJSRuntime JSRuntime
+
+<div class="card mb-3">
+    <div class="card-header">
+        <i class="bi bi-image me-2"></i>Logo
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(Design.LogoBase64))
+        {
+            <div class="text-center mb-3">
+                <img src="data:image/png;base64,@Design.LogoBase64"
+                     alt="Logo preview"
+                     style="max-width: @(Design.LogoWidth)px; max-height: 100px; border: 1px solid #ddd; padding: 5px;" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Logo Width: @(Design.LogoWidth)px</label>
+                <input type="range"
+                       class="form-range"
+                       min="50"
+                       max="200"
+                       value="@Design.LogoWidth"
+                       @onchange="OnWidthChanged" />
+            </div>
+
+            <button class="btn btn-outline-danger btn-sm w-100" @onclick="RemoveLogo">
+                <i class="bi bi-trash me-1"></i>Remove Logo
+            </button>
+        }
+        else
+        {
+            <div class="text-center p-4 border border-dashed rounded bg-light">
+                <i class="bi bi-cloud-upload fs-1 text-muted"></i>
+                <p class="text-muted mb-2">Upload a logo image</p>
+                <InputFile OnChange="OnFileSelected" accept="image/png,image/jpeg,image/gif" class="d-none" id="logo-upload" />
+                <label for="logo-upload" class="btn btn-primary">
+                    <i class="bi bi-upload me-1"></i>Choose File
+                </label>
+            </div>
+            <small class="text-muted d-block mt-2">
+                Recommended: PNG with transparent background, max 500KB
+            </small>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public TemplateDesign Design { get; set; } = new();
+    [Parameter] public EventCallback<TemplateDesign> DesignChanged { get; set; }
+
+    private const int MaxFileSizeBytes = 500 * 1024; // 500KB
+
+    private async Task NotifyDesignChanged()
+    {
+        await DesignChanged.InvokeAsync(Design);
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file.Size > MaxFileSizeBytes)
+        {
+            // Could add error handling here
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var bytes = memoryStream.ToArray();
+            Design.LogoBase64 = Convert.ToBase64String(bytes);
+            await NotifyDesignChanged();
+        }
+        catch (Exception)
+        {
+            // Could add error handling here
+        }
+    }
+
+    private async Task OnWidthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var width))
+        {
+            Design.LogoWidth = Math.Clamp(width, 50, 200);
+            await NotifyDesignChanged();
+        }
+    }
+
+    private async Task RemoveLogo()
+    {
+        Design.LogoBase64 = null;
+        await NotifyDesignChanged();
+    }
+}
+
+<style>
+    .border-dashed {
+        border-style: dashed !important;
+    }
+</style>

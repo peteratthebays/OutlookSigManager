@@ -1,0 +1,91 @@
+@page "/user-audit"
+@using Microsoft.AspNetCore.Authorization
+@using OutlookSigManager.Models
+@using OutlookSigManager.Services
+@using OutlookSigManager.Components.UserAudit
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject IGraphUserService GraphUserService
+@inject ILogger<UserAudit> Logger
+
+<PageTitle>User Audit - OutlookSigManager</PageTitle>
+
+<div class="container-fluid py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">User Audit</h1>
+            <p class="text-muted mb-0">Manage user profiles in Entra ID (Azure AD)</p>
+        </div>
+    </div>
+
+    @if (ErrorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>
+            <strong>Error:</strong> @ErrorMessage
+            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading users from Entra ID...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <UserEditGrid InitialUsers="@AllUsers" OnRefreshRequested="@LoadUsers" />
+    }
+
+    <div class="mt-4">
+        <div class="alert alert-info">
+            <h5><i class="bi bi-info-circle me-2"></i>How it works</h5>
+            <ul class="mb-0">
+                <li><strong>Click on any cell</strong> to edit the value inline</li>
+                <li><strong>Yellow highlighting</strong> indicates unsaved changes</li>
+                <li><strong>Save</strong> individual rows or use "Save All" for batch updates</li>
+                <li>Changes are saved directly to <strong>Entra ID (Azure AD)</strong></li>
+                <li><strong>Display Name</strong> and <strong>Email</strong> are read-only (managed by IT)</li>
+            </ul>
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<UserProfile> AllUsers { get; set; } = Array.Empty<UserProfile>();
+    private bool IsLoading { get; set; } = true;
+    private string? ErrorMessage { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+    }
+
+    private async Task LoadUsers()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            Logger.LogInformation("Loading users for User Audit page");
+            AllUsers = await GraphUserService.GetAllUsersAsync();
+            Logger.LogInformation("Loaded {Count} users", AllUsers.Count);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading users");
+            ErrorMessage = $"Failed to load users: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+}

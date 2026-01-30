@@ -1,0 +1,58 @@
+@using Microsoft.AspNetCore.Components.Authorization
+
+<div class="top-row ps-3 navbar navbar-dark">
+    <div class="container-fluid">
+        <a class="navbar-brand" href="">OutlookSigManager</a>
+    </div>
+</div>
+
+<input type="checkbox" title="Navigation menu" class="navbar-toggler" />
+
+<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+    <nav class="nav flex-column">
+        <AuthorizeView>
+            <Authorized>
+                <!-- Signature Creator - Available to all authenticated users -->
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <span class="bi bi-pen-fill" aria-hidden="true"></span> Signature Creator
+                    </NavLink>
+                </div>
+
+                <!-- Admin Section -->
+                <AuthorizeView Policy="AdminOnly">
+                    <Authorized Context="adminContext">
+                        <div class="nav-item px-3 mt-3">
+                            <small class="text-muted text-uppercase">Admin</small>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="user-audit">
+                                <span class="bi bi-people-fill" aria-hidden="true"></span> User Audit
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="template-designer">
+                                <span class="bi bi-palette-fill" aria-hidden="true"></span> Template Designer
+                            </NavLink>
+                        </div>
+
+                        <div class="nav-item px-3">
+                            <NavLink class="nav-link" href="dashboard">
+                                <span class="bi bi-speedometer2" aria-hidden="true"></span> Audit Dashboard
+                            </NavLink>
+                        </div>
+                    </Authorized>
+                </AuthorizeView>
+            </Authorized>
+            <NotAuthorized>
+                <div class="nav-item px-3">
+                    <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
+                        <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
+                    </NavLink>
+                </div>
+            </NotAuthorized>
+        </AuthorizeView>
+    </nav>
+</div>

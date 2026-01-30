@@ -1,0 +1,126 @@
+@page "/signature-creator"
+@page "/"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Security.Claims
+@using OutlookSigManager.Models
+@using OutlookSigManager.Services
+@using OutlookSigManager.Components.SignatureCreator
+@attribute [Authorize]
+@rendermode InteractiveServer
+@inject IGraphUserService GraphUserService
+@inject ILogger<SignatureCreator> Logger
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<PageTitle>Signature Creator - OutlookSigManager</PageTitle>
+
+<div class="container py-4" style="max-width: 1000px;">
+    <div class="text-center mb-4">
+        <h1 class="h2 mb-2">Create Your Email Signature</h1>
+        <p class="text-muted">Generate a professional email signature using your company profile</p>
+    </div>
+
+    @if (ErrorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@ErrorMessage
+            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading your profile...</p>
+            </div>
+        </div>
+    }
+    else
+    {
+        <div class="row">
+            <div class="col-lg-6">
+                <UserProfileForm User="@CurrentUser"
+                                Overrides="@FieldOverrides"
+                                OverridesChanged="@OnOverridesChanged" />
+            </div>
+            <div class="col-lg-6">
+                <div class="sticky-top" style="top: 20px;">
+                    <SignaturePreview User="@EffectiveUser"
+                                     Overrides="@FieldOverrides" />
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private UserProfile? CurrentUser { get; set; }
+    private SignatureFieldOverride FieldOverrides { get; set; } = new();
+    private bool IsLoading { get; set; } = true;
+    private string? ErrorMessage { get; set; }
+
+    private UserProfile? EffectiveUser => CurrentUser != null
+        ? FieldOverrides.ApplyToProfile(CurrentUser)
+        : null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            // Get user email from authentication claims
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            var email = user.FindFirst("preferred_username")?.Value
+                     ?? user.FindFirst(ClaimTypes.Email)?.Value
+                     ?? user.FindFirst("email")?.Value;
+
+            if (string.IsNullOrEmpty(email))
+            {
+                Logger.LogWarning("Could not find email claim for current user");
+                ErrorMessage = "Unable to determine your email address. Please sign out and sign in again.";
+                return;
+            }
+
+            Logger.LogInformation("Loading profile for user: {Email}", email);
+            CurrentUser = await GraphUserService.GetUserByEmailAsync(email);
+
+            if (CurrentUser == null)
+            {
+                Logger.LogWarning("GetUserByEmailAsync returned null for {Email}", email);
+                ErrorMessage = "Unable to load your profile. Please try refreshing the page or signing in again.";
+            }
+            else
+            {
+                Logger.LogInformation("Loaded profile for {DisplayName}", CurrentUser.DisplayName);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading current user");
+            ErrorMessage = $"Failed to load your profile: {ex.Message}";
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task OnOverridesChanged(SignatureFieldOverride overrides)
+    {
+        FieldOverrides = overrides;
+        await Task.CompletedTask;
+    }
+}

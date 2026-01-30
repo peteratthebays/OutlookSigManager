@@ -1,0 +1,126 @@
+@namespace OutlookSigManager.Components.TemplateDesigner
+@using OutlookSigManager.Models
+
+<div class="card mb-3">
+    <div class="card-header">
+        <i class="bi bi-palette me-2"></i>Styling
+    </div>
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Font Family</label>
+            <select class="form-select"
+                    value="@Design.FontFamily"
+                    @onchange="OnFontFamilyChanged">
+                <option value="Arial, sans-serif">Arial</option>
+                <option value="Calibri, sans-serif">Calibri</option>
+                <option value="Georgia, serif">Georgia</option>
+                <option value="'Times New Roman', serif">Times New Roman</option>
+                <option value="Verdana, sans-serif">Verdana</option>
+                <option value="'Segoe UI', sans-serif">Segoe UI</option>
+                <option value="Tahoma, sans-serif">Tahoma</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Font Size</label>
+            <select class="form-select"
+                    value="@Design.FontSize"
+                    @onchange="OnFontSizeChanged">
+                <option value="8pt">8pt</option>
+                <option value="9pt">9pt</option>
+                <option value="10pt">10pt</option>
+                <option value="11pt">11pt</option>
+                <option value="12pt">12pt</option>
+                <option value="14pt">14pt</option>
+            </select>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Primary Color</label>
+            <div class="input-group">
+                <input type="color"
+                       class="form-control form-control-color"
+                       value="@Design.PrimaryColor"
+                       @onchange="OnPrimaryColorChanged"
+                       title="Choose primary color" />
+                <input type="text"
+                       class="form-control"
+                       value="@Design.PrimaryColor"
+                       @onchange="OnPrimaryColorTextChanged"
+                       style="max-width: 100px;" />
+            </div>
+            <small class="text-muted">Used for name and accents</small>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Secondary Color</label>
+            <div class="input-group">
+                <input type="color"
+                       class="form-control form-control-color"
+                       value="@Design.SecondaryColor"
+                       @onchange="OnSecondaryColorChanged"
+                       title="Choose secondary color" />
+                <input type="text"
+                       class="form-control"
+                       value="@Design.SecondaryColor"
+                       @onchange="OnSecondaryColorTextChanged"
+                       style="max-width: 100px;" />
+            </div>
+            <small class="text-muted">Used for other text</small>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public TemplateDesign Design { get; set; } = new();
+    [Parameter] public EventCallback<TemplateDesign> DesignChanged { get; set; }
+
+    private async Task NotifyDesignChanged()
+    {
+        await DesignChanged.InvokeAsync(Design);
+    }
+
+    private async Task OnFontFamilyChanged(ChangeEventArgs e)
+    {
+        Design.FontFamily = e.Value?.ToString() ?? "Arial, sans-serif";
+        await NotifyDesignChanged();
+    }
+
+    private async Task OnFontSizeChanged(ChangeEventArgs e)
+    {
+        Design.FontSize = e.Value?.ToString() ?? "10pt";
+        await NotifyDesignChanged();
+    }
+
+    private async Task OnPrimaryColorChanged(ChangeEventArgs e)
+    {
+        Design.PrimaryColor = e.Value?.ToString() ?? "#0066cc";
+        await NotifyDesignChanged();
+    }
+
+    private async Task OnPrimaryColorTextChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("#"))
+        {
+            Design.PrimaryColor = value;
+            await NotifyDesignChanged();
+        }
+    }
+
+    private async Task OnSecondaryColorChanged(ChangeEventArgs e)
+    {
+        Design.SecondaryColor = e.Value?.ToString() ?? "#666666";
+        await NotifyDesignChanged();
+    }
+
+    private async Task OnSecondaryColorTextChanged(ChangeEventArgs e)
+    {
+        var value = e.Value?.ToString();
+        if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("#"))
+        {
+            Design.SecondaryColor = value;
+            await NotifyDesignChanged();
+        }
+    }
+}

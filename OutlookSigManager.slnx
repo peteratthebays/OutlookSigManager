@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="OutlookSigManager.AppHost/OutlookSigManager.AppHost.csproj" />
+  <Project Path="OutlookSigManager.ServiceDefaults/OutlookSigManager.ServiceDefaults.csproj" />
+  <Project Path="OutlookSigManager/OutlookSigManager.csproj" />
+</Solution>

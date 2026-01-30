@@ -1,0 +1,135 @@
+@namespace OutlookSigManager.Components.SignatureCreator
+@using OutlookSigManager.Models
+
+<div class="card mb-3">
+    <div class="card-header">
+        <i class="bi bi-person-circle me-2"></i>Your Profile
+    </div>
+    <div class="card-body">
+        @if (User == null)
+        {
+            <div class="text-center py-3 text-muted">
+                <span class="spinner-border spinner-border-sm me-2"></span>
+                Loading your profile...
+            </div>
+        }
+        else
+        {
+            <div class="mb-3 p-3 bg-light rounded">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Name</small>
+                        <strong>@User.DisplayName</strong>
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Email</small>
+                        <strong>@User.Mail</strong>
+                    </div>
+                </div>
+                <div class="row mt-2">
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Job Title</small>
+                        @(User.JobTitle ?? "-")
+                    </div>
+                    <div class="col-sm-6">
+                        <small class="text-muted d-block">Department</small>
+                        @(User.Department ?? "-")
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-pencil-square me-2"></i>Customize Your Signature</span>
+        @if (Overrides.HasOverrides())
+        {
+            <button class="btn btn-outline-secondary btn-sm" @onclick="ClearOverrides">
+                <i class="bi bi-x-lg me-1"></i>Clear All
+            </button>
+        }
+    </div>
+    <div class="card-body">
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-info-circle me-2"></i>
+            <small>Changes here are for <strong>your signature only</strong> and will NOT update your Entra ID profile.</small>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <label class="form-label">Display Name Override</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="@(User?.DisplayName ?? "Your name")"
+                       @bind="Overrides.OverrideName"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Job Title Override</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="@(User?.JobTitle ?? "Your job title")"
+                       @bind="Overrides.OverrideJobTitle"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Department Override</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="@(User?.Department ?? "Your department")"
+                       @bind="Overrides.OverrideDepartment"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Business Phone Override</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="@(User?.BusinessPhone ?? "Phone number")"
+                       @bind="Overrides.OverrideBusinessPhone"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Mobile Phone Override</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="@(User?.MobilePhone ?? "Mobile number")"
+                       @bind="Overrides.OverrideMobilePhone"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+            </div>
+            <div class="col-md-6">
+                <label class="form-label">Working Days</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="e.g., Mon-Thu, Part-time"
+                       @bind="Overrides.WorkingDays"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+                <small class="text-muted">Optional - shows in signature if enabled in template</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public UserProfile? User { get; set; }
+    [Parameter] public SignatureFieldOverride Overrides { get; set; } = new();
+    [Parameter] public EventCallback<SignatureFieldOverride> OverridesChanged { get; set; }
+
+    private async Task NotifyChanged()
+    {
+        await OverridesChanged.InvokeAsync(Overrides);
+    }
+
+    private async Task ClearOverrides()
+    {
+        Overrides.Clear();
+        await NotifyChanged();
+    }
+}

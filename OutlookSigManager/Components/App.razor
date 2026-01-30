@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <ResourcePreloader />
+    <link rel="stylesheet" href="@Assets["lib/bootstrap/dist/css/bootstrap.min.css"]" />
+    <link rel="stylesheet" href="@Assets["app.css"]" />
+    <link rel="stylesheet" href="@Assets["OutlookSigManager.styles.css"]" />
+    <ImportMap />
+    <link rel="icon" type="image/png" href="favicon.png" />
+    <HeadOutlet @rendermode="InteractiveServer" />
+</head>
+
+<body>
+    <Routes @rendermode="InteractiveServer" />
+    <ReconnectModal />
+    <script src="@Assets["_framework/blazor.web.js"]"></script>
+    <script src="js/template-designer.js"></script>
+    <script>
+        async function copyHtmlToClipboard(html) {
+            try {
+                // Create a blob with HTML content
+                const blob = new Blob([html], { type: 'text/html' });
+                const clipboardItem = new ClipboardItem({
+                    'text/html': blob,
+                    'text/plain': new Blob([html.replace(/<[^>]*>/g, '')], { type: 'text/plain' })
+                });
+                await navigator.clipboard.write([clipboardItem]);
+                return true;
+            } catch (err) {
+                console.error('Failed to copy HTML:', err);
+                // Fallback to plain text
+                await navigator.clipboard.writeText(html);
+                return false;
+            }
+        }
+    </script>
+</body>
+
+</html>

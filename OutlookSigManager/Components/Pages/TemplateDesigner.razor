@@ -1,0 +1,232 @@
+@page "/template-designer"
+@using Microsoft.AspNetCore.Authorization
+@using OutlookSigManager.Models
+@using OutlookSigManager.Services
+@using OutlookSigManager.Components.TemplateDesigner
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject ITemplateStorageService TemplateStorage
+@inject ILogger<TemplateDesigner> Logger
+
+<PageTitle>Template Designer - OutlookSigManager</PageTitle>
+
+<div class="container-fluid py-4" style="max-width: 100%; overflow-x: hidden;">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h1 class="h2 mb-1">Template Designer</h1>
+            <p class="text-muted mb-0">Design and customize email signature templates</p>
+        </div>
+        <div class="d-flex gap-2">
+            <button class="btn btn-outline-secondary"
+                    @onclick="ResetToDefault"
+                    disabled="@IsSaving">
+                <i class="bi bi-arrow-counterclockwise me-1"></i>Reset to Default
+            </button>
+            <button class="btn btn-primary"
+                    @onclick="SaveTemplate"
+                    disabled="@IsSaving">
+                @if (IsSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-save me-1"></i>Save Template
+            </button>
+        </div>
+    </div>
+
+    @if (SuccessMessage != null)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <i class="bi bi-check-circle-fill me-2"></i>@SuccessMessage
+            <button type="button" class="btn-close" @onclick="() => SuccessMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (ErrorMessage != null)
+    {
+        <div class="alert alert-danger alert-dismissible fade show" role="alert">
+            <i class="bi bi-exclamation-triangle-fill me-2"></i>@ErrorMessage
+            <button type="button" class="btn-close" @onclick="() => ErrorMessage = null" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-content-center py-5">
+            <div class="text-center">
+                <div class="spinner-border text-primary mb-3" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="text-muted">Loading template...</p>
+            </div>
+        </div>
+    }
+    else if (CurrentDesign != null)
+    {
+        <div class="row">
+            <!-- Left Panel: Controls -->
+            <div class="col-lg-5">
+                <StyleControlsPanel Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
+                <FieldConfigPanel Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
+                <ImageUploader Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
+                <BannerUploader Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
+
+                <!-- Disclaimer -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-chat-square-text me-2"></i>Disclaimer
+                    </div>
+                    <div class="card-body">
+                        <textarea class="form-control"
+                                  rows="3"
+                                  placeholder="Optional disclaimer text..."
+                                  @bind="CurrentDesign.DisclaimerText"
+                                  @bind:event="oninput"
+                                  @bind:after="OnDesignChangedSync"></textarea>
+                        <small class="text-muted">Appears at the bottom of the signature in small text</small>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Panel: Preview -->
+            <div class="col-lg-7">
+                <div class="sticky-top" style="top: 20px; max-width: 100%; overflow: hidden;">
+                    <TemplatePreview Design="@CurrentDesign" />
+
+                    <div class="card mt-3">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <span><i class="bi bi-code-slash me-2"></i>Raw HTML</span>
+                            <button class="btn btn-sm btn-outline-secondary" @onclick="() => ShowRawHtml = !ShowRawHtml">
+                                @(ShowRawHtml ? "Hide" : "Show")
+                            </button>
+                        </div>
+                        @if (ShowRawHtml)
+                        {
+                            <div class="card-body p-0" style="max-width: 100%; overflow: hidden;">
+                                <div class="bg-light p-2" style="max-height: 200px; overflow: auto; max-width: 100%;">
+                                    <pre class="mb-0 small" style="white-space: pre-wrap; word-break: break-all; overflow-wrap: break-word; max-width: 100%;">@TruncatedPreviewHtml</pre>
+                                </div>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    }
+</div>
+
+@code {
+    private TemplateDesign? CurrentDesign { get; set; }
+    private bool IsLoading { get; set; } = true;
+    private bool IsSaving { get; set; }
+    private bool ShowRawHtml { get; set; } = false;
+    private string? SuccessMessage { get; set; }
+    private string? ErrorMessage { get; set; }
+    private string? PreviewHtml { get; set; }
+
+    // Truncate base64 images in the raw HTML display to prevent layout issues
+    private string? TruncatedPreviewHtml => TruncateBase64InHtml(PreviewHtml);
+
+    private static string? TruncateBase64InHtml(string? html)
+    {
+        if (string.IsNullOrEmpty(html)) return html;
+
+        // Replace long base64 strings with truncated version for display
+        return System.Text.RegularExpressions.Regex.Replace(
+            html,
+            @"(data:image/[^;]+;base64,)([A-Za-z0-9+/=]{100})[A-Za-z0-9+/=]+",
+            "$1$2...[truncated]");
+    }
+
+    [Inject] private ISignatureTemplateService TemplateService { get; set; } = default!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    private async Task LoadTemplate()
+    {
+        IsLoading = true;
+        ErrorMessage = null;
+
+        try
+        {
+            CurrentDesign = await TemplateStorage.GetTemplateAsync();
+            UpdatePreviewHtml();
+            Logger.LogInformation("Loaded template: {Name}", CurrentDesign.Name);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading template");
+            ErrorMessage = $"Failed to load template: {ex.Message}";
+            CurrentDesign = TemplateDesign.CreateDefault();
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task SaveTemplate()
+    {
+        if (CurrentDesign == null || IsSaving) return;
+
+        IsSaving = true;
+        ErrorMessage = null;
+        SuccessMessage = null;
+
+        try
+        {
+            await TemplateStorage.SaveTemplateAsync(CurrentDesign);
+            SuccessMessage = "Template saved successfully!";
+            Logger.LogInformation("Saved template: {Name}", CurrentDesign.Name);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving template");
+            ErrorMessage = $"Failed to save template: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task ResetToDefault()
+    {
+        CurrentDesign = TemplateDesign.CreateDefault();
+        UpdatePreviewHtml();
+        await Task.CompletedTask;
+    }
+
+    private async Task OnDesignChanged(TemplateDesign design)
+    {
+        CurrentDesign = design;
+        UpdatePreviewHtml();
+        await Task.CompletedTask;
+    }
+
+    private void OnDesignChangedSync()
+    {
+        UpdatePreviewHtml();
+    }
+
+    private void UpdatePreviewHtml()
+    {
+        if (CurrentDesign == null) return;
+
+        var sampleUser = new UserProfile
+        {
+            Id = "sample",
+            DisplayName = "Jane Smith",
+            JobTitle = "Marketing Manager",
+            Department = "Marketing",
+            Mail = "jane.smith@company.com",
+            BusinessPhone = "+61 2 1234 5678",
+            MobilePhone = "+61 400 123 456"
+        };
+
+        PreviewHtml = TemplateService.GenerateHtmlFromDesign(CurrentDesign, sampleUser);
+    }
+}

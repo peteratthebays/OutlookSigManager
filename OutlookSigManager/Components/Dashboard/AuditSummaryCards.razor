@@ -1,0 +1,94 @@
+@using OutlookSigManager.Models
+
+<div class="row g-3 mb-4">
+    <div class="col-md-3 col-sm-6">
+        <div class="card summary-card total">
+            <div class="card-body">
+                <div class="card-icon">
+                    <i class="bi bi-people-fill"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-value">@Summary.TotalUsers</h3>
+                    <p class="card-label">Total Users</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card summary-card compliant">
+            <div class="card-body">
+                <div class="card-icon">
+                    <i class="bi bi-check-circle-fill"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-value">@Summary.ReadyToDeployCount</h3>
+                    <p class="card-label">Ready to Deploy</p>
+                    <small class="card-percentage">@Summary.ProfileCompliancePercentage% profiles complete</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card summary-card missing">
+            <div class="card-body">
+                <div class="card-icon">
+                    <i class="bi bi-person-x-fill"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-value">@Summary.IncompleteProfileCount</h3>
+                    <p class="card-label">Incomplete Profiles</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3 col-sm-6">
+        <div class="card summary-card issues">
+            <div class="card-body">
+                <div class="card-icon">
+                    <i class="bi bi-shield-check"></i>
+                </div>
+                <div class="card-content">
+                    <h3 class="card-value">@Summary.CompliantUsers</h3>
+                    <p class="card-label">Has Signature</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Summary.NotAccessibleCount > 0)
+{
+    <div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-shield-exclamation me-2"></i>
+        <div>
+            <strong>@Summary.NotAccessibleCount users</strong> have mailboxes that are not accessible.
+            Ensure the app has ApplicationImpersonation role in Exchange Online.
+        </div>
+    </div>
+}
+
+<div class="alert alert-info d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-info-circle-fill me-2"></i>
+    <div>
+        <strong>Note:</strong> Signatures created in the new Outlook are stored in a cloud-only format that cannot be read via API.
+        Use "Deploy Signature" to set a standardized signature for users.
+    </div>
+</div>
+
+@if (Summary.ErrorCount > 0)
+{
+    <div class="alert alert-danger d-flex align-items-center mb-4" role="alert">
+        <i class="bi bi-exclamation-triangle-fill me-2"></i>
+        <div>
+            <strong>@Summary.ErrorCount errors</strong> occurred during the audit. Check the results table for details.
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter]
+    public AuditSummary Summary { get; set; } = new();
+}

@@ -1,0 +1,160 @@
+@namespace OutlookSigManager.Components.SignatureCreator
+@using OutlookSigManager.Models
+@using OutlookSigManager.Services
+@inject ISignatureTemplateService TemplateService
+@inject ITemplateStorageService TemplateStorage
+@inject IJSRuntime JSRuntime
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-eye me-2"></i>Your Signature Preview</span>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshPreview">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="border rounded p-4 bg-white mb-3" style="min-height: 150px;">
+            @if (IsLoading)
+            {
+                <div class="text-center py-3">
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                    Loading preview...
+                </div>
+            }
+            else if (User == null)
+            {
+                <p class="text-muted fst-italic mb-0">
+                    <i class="bi bi-info-circle me-2"></i>
+                    Sign in to see your personalized signature preview.
+                </p>
+            }
+            else if (!string.IsNullOrEmpty(SignatureHtml))
+            {
+                @((MarkupString)SignatureHtml)
+            }
+            else
+            {
+                <p class="text-muted fst-italic mb-0">Unable to generate preview.</p>
+            }
+        </div>
+
+        <div class="d-grid gap-2">
+            <button class="btn btn-success btn-lg"
+                    @onclick="CopyToClipboard"
+                    disabled="@(string.IsNullOrEmpty(SignatureHtml) || IsCopying)">
+                @if (IsCopying)
+                {
+                    <span class="spinner-border spinner-border-sm me-2"></span>
+                }
+                else if (CopySuccess)
+                {
+                    <i class="bi bi-check-lg me-2"></i>
+                }
+                else
+                {
+                    <i class="bi bi-clipboard-check me-2"></i>
+                }
+                @(CopySuccess ? "Copied!" : "Copy Signature to Clipboard")
+            </button>
+        </div>
+
+        @if (CopySuccess)
+        {
+            <div class="alert alert-success mt-3 mb-0">
+                <h6><i class="bi bi-check-circle-fill me-2"></i>Signature Copied!</h6>
+                <p class="mb-2">Now paste it into Outlook:</p>
+                <ol class="mb-0 small">
+                    <li>Open <strong>Outlook</strong> (web or desktop)</li>
+                    <li>Go to <strong>Settings</strong> <i class="bi bi-arrow-right"></i> <strong>Mail</strong> <i class="bi bi-arrow-right"></i> <strong>Compose and reply</strong></li>
+                    <li>Under <strong>Email signature</strong>, click in the editor</li>
+                    <li>Press <strong>Ctrl+V</strong> (or Cmd+V on Mac) to paste</li>
+                    <li>Click <strong>Save</strong></li>
+                </ol>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public UserProfile? User { get; set; }
+    [Parameter] public SignatureFieldOverride? Overrides { get; set; }
+
+    private string? SignatureHtml { get; set; }
+    private bool IsLoading { get; set; }
+    private bool IsCopying { get; set; }
+    private bool CopySuccess { get; set; }
+    private TemplateDesign? _currentDesign;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTemplate();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await RefreshPreview();
+    }
+
+    private async Task LoadTemplate()
+    {
+        try
+        {
+            _currentDesign = await TemplateStorage.GetTemplateAsync();
+        }
+        catch
+        {
+            _currentDesign = TemplateDesign.CreateDefault();
+        }
+    }
+
+    private async Task RefreshPreview()
+    {
+        if (User == null)
+        {
+            SignatureHtml = null;
+            return;
+        }
+
+        IsLoading = true;
+        CopySuccess = false;
+
+        try
+        {
+            if (_currentDesign == null)
+            {
+                await LoadTemplate();
+            }
+
+            if (_currentDesign != null)
+            {
+                SignatureHtml = TemplateService.GenerateHtmlFromDesign(_currentDesign, User, Overrides);
+            }
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task CopyToClipboard()
+    {
+        if (string.IsNullOrEmpty(SignatureHtml) || IsCopying) return;
+
+        IsCopying = true;
+        CopySuccess = false;
+
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("copyHtmlToClipboard", SignatureHtml);
+            CopySuccess = true;
+        }
+        catch
+        {
+            // Could add error handling here
+        }
+        finally
+        {
+            IsCopying = false;
+        }
+    }
+}

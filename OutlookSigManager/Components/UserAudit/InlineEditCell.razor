@@ -1,0 +1,110 @@
+@namespace OutlookSigManager.Components.UserAudit
+
+<td class="@CellClass">
+    @if (IsEditing)
+    {
+        <input type="text"
+               class="form-control form-control-sm"
+               @bind="EditValue"
+               @bind:event="oninput"
+               @onblur="OnBlur"
+               @onkeydown="OnKeyDown"
+               @ref="_inputRef" />
+    }
+    else
+    {
+        <span @onclick="StartEdit" class="editable-cell" title="Click to edit">
+            @if (string.IsNullOrWhiteSpace(Value))
+            {
+                <span class="text-muted fst-italic">-</span>
+            }
+            else
+            {
+                @Value
+            }
+        </span>
+    }
+</td>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public bool IsReadOnly { get; set; } = false;
+    [Parameter] public bool IsDirty { get; set; } = false;
+    [Parameter] public string? Placeholder { get; set; }
+
+    private bool IsEditing { get; set; } = false;
+    private string? EditValue { get; set; }
+    private ElementReference _inputRef;
+
+    private string CellClass => IsDirty ? "table-warning" : "";
+
+    private void StartEdit()
+    {
+        if (IsReadOnly) return;
+
+        EditValue = Value;
+        IsEditing = true;
+    }
+
+    private async Task OnBlur()
+    {
+        await CommitEdit();
+    }
+
+    private async Task OnKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await CommitEdit();
+        }
+        else if (e.Key == "Escape")
+        {
+            CancelEdit();
+        }
+    }
+
+    private async Task CommitEdit()
+    {
+        IsEditing = false;
+        if (EditValue != Value)
+        {
+            await ValueChanged.InvokeAsync(EditValue);
+        }
+    }
+
+    private void CancelEdit()
+    {
+        IsEditing = false;
+        EditValue = Value;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (IsEditing)
+        {
+            try
+            {
+                await _inputRef.FocusAsync();
+            }
+            catch
+            {
+                // Element may not be available
+            }
+        }
+    }
+}
+
+<style>
+    .editable-cell {
+        cursor: pointer;
+        padding: 2px 4px;
+        border-radius: 3px;
+        display: block;
+        min-height: 1.5em;
+    }
+
+    .editable-cell:hover {
+        background-color: #f0f0f0;
+    }
+</style>

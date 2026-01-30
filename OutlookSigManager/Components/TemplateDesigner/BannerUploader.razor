@@ -1,0 +1,120 @@
+@namespace OutlookSigManager.Components.TemplateDesigner
+@using OutlookSigManager.Models
+
+<div class="card mb-3">
+    <div class="card-header">
+        <i class="bi bi-card-image me-2"></i>Banner (Below Signature)
+    </div>
+    <div class="card-body">
+        @if (!string.IsNullOrEmpty(Design.BannerLogoBase64))
+        {
+            <div class="text-center mb-3">
+                <img src="data:image/png;base64,@Design.BannerLogoBase64"
+                     alt="Banner preview"
+                     style="max-width: 100%; width: @(Design.BannerLogoWidth)px; border: 1px solid #ddd; padding: 5px;" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Banner Width: @(Design.BannerLogoWidth)px</label>
+                <input type="range"
+                       class="form-range"
+                       min="100"
+                       max="600"
+                       value="@Design.BannerLogoWidth"
+                       @onchange="OnWidthChanged" />
+            </div>
+
+            <div class="mb-3">
+                <label class="form-label">Link URL (optional)</label>
+                <input type="url"
+                       class="form-control"
+                       placeholder="https://example.com"
+                       value="@Design.BannerLogoUrl"
+                       @onchange="OnUrlChanged" />
+                <small class="text-muted">Clicking the banner will open this URL</small>
+            </div>
+
+            <button class="btn btn-outline-danger w-100" type="button" @onclick="RemoveBanner">
+                <i class="bi bi-trash me-1"></i>Remove Banner
+            </button>
+        }
+        else
+        {
+            <div class="text-center p-4 border border-dashed rounded bg-light">
+                <i class="bi bi-card-image fs-1 text-muted"></i>
+                <p class="text-muted mb-2">Upload a banner image</p>
+                <InputFile OnChange="OnFileSelected" accept="image/png,image/jpeg,image/gif" class="d-none" id="banner-upload" />
+                <label for="banner-upload" class="btn btn-primary">
+                    <i class="bi bi-upload me-1"></i>Choose File
+                </label>
+            </div>
+            <small class="text-muted d-block mt-2">
+                Recommended: Wide image (e.g., 400-600px), max 500KB. Appears below signature with optional hyperlink.
+            </small>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public TemplateDesign Design { get; set; } = new();
+    [Parameter] public EventCallback<TemplateDesign> DesignChanged { get; set; }
+
+    private const int MaxFileSizeBytes = 500 * 1024; // 500KB
+
+    private async Task NotifyDesignChanged()
+    {
+        await DesignChanged.InvokeAsync(Design);
+    }
+
+    private async Task OnFileSelected(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+
+        if (file.Size > MaxFileSizeBytes)
+        {
+            return;
+        }
+
+        try
+        {
+            using var stream = file.OpenReadStream(MaxFileSizeBytes);
+            using var memoryStream = new MemoryStream();
+            await stream.CopyToAsync(memoryStream);
+            var bytes = memoryStream.ToArray();
+            Design.BannerLogoBase64 = Convert.ToBase64String(bytes);
+            await NotifyDesignChanged();
+        }
+        catch (Exception)
+        {
+            // Could add error handling here
+        }
+    }
+
+    private async Task OnWidthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var width))
+        {
+            Design.BannerLogoWidth = Math.Clamp(width, 100, 600);
+            await NotifyDesignChanged();
+        }
+    }
+
+    private async Task OnUrlChanged(ChangeEventArgs e)
+    {
+        Design.BannerLogoUrl = e.Value?.ToString();
+        await NotifyDesignChanged();
+    }
+
+    private async Task RemoveBanner()
+    {
+        Design.BannerLogoBase64 = null;
+        Design.BannerLogoUrl = null;
+        await NotifyDesignChanged();
+    }
+}
+
+<style>
+    .border-dashed {
+        border-style: dashed !important;
+    }
+</style>

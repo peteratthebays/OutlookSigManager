@@ -1,0 +1,54 @@
+@namespace OutlookSigManager.Components.TemplateDesigner
+@using OutlookSigManager.Models
+@using OutlookSigManager.Services
+@inject ISignatureTemplateService TemplateService
+
+<div class="card">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <span><i class="bi bi-eye me-2"></i>Live Preview</span>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshPreview">
+            <i class="bi bi-arrow-clockwise"></i>
+        </button>
+    </div>
+    <div class="card-body">
+        <div class="border rounded p-3 bg-white" style="min-height: 150px; overflow: auto; max-width: 100%;">
+            @if (!string.IsNullOrEmpty(PreviewHtml))
+            {
+                @((MarkupString)PreviewHtml)
+            }
+            else
+            {
+                <p class="text-muted fst-italic">Preview will appear here</p>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter] public TemplateDesign Design { get; set; } = new();
+    [Parameter] public UserProfile? SampleUser { get; set; }
+
+    private string? PreviewHtml { get; set; }
+
+    private static readonly UserProfile DefaultSampleUser = new()
+    {
+        Id = "sample",
+        DisplayName = "Jane Smith",
+        JobTitle = "Marketing Manager",
+        Department = "Marketing",
+        Mail = "jane.smith@company.com",
+        BusinessPhone = "+61 2 1234 5678",
+        MobilePhone = "+61 400 123 456"
+    };
+
+    protected override void OnParametersSet()
+    {
+        RefreshPreview();
+    }
+
+    private void RefreshPreview()
+    {
+        var user = SampleUser ?? DefaultSampleUser;
+        PreviewHtml = TemplateService.GenerateHtmlFromDesign(Design, user);
+    }
+}
