@@ -8,7 +8,7 @@
 @inject ITemplateStorageService TemplateStorage
 @inject ILogger<TemplateDesigner> Logger
 
-<PageTitle>Template Designer - OutlookSigManager</PageTitle>
+<PageTitle>Template Designer - Baysig</PageTitle>
 
 <div class="container-fluid py-4" style="max-width: 100%; overflow-x: hidden;">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -70,6 +70,22 @@
                 <FieldConfigPanel Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
                 <ImageUploader Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
                 <BannerUploader Design="@CurrentDesign" DesignChanged="@OnDesignChanged" />
+
+                <!-- Address -->
+                <div class="card mb-3">
+                    <div class="card-header">
+                        <i class="bi bi-geo-alt me-2"></i>Address
+                    </div>
+                    <div class="card-body">
+                        <input type="text"
+                               class="form-control"
+                               placeholder="Company address..."
+                               @bind="CurrentDesign.Address"
+                               @bind:event="oninput"
+                               @bind:after="OnDesignChangedSync" />
+                        <small class="text-muted">Appears as the last line of the signature</small>
+                    </div>
+                </div>
 
                 <!-- Disclaimer -->
                 <div class="card mb-3">

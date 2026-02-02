@@ -46,17 +46,17 @@
                     @if (field.IsEnabled)
                     {
                         <div class="ps-4 pt-2 border-top">
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
+                            <div class="row g-2 align-items-end">
+                                <div class="col">
                                     <label class="form-label small mb-1">Prefix</label>
                                     <input type="text"
                                            class="form-control form-control-sm"
-                                           placeholder="e.g., P: "
+                                           placeholder="e.g., P:"
                                            value="@field.Prefix"
                                            @onchange="e => OnPrefixChanged(field, e)" />
                                 </div>
-                                <div class="col-6">
-                                    <label class="form-label small mb-1">Font Size</label>
+                                <div class="col">
+                                    <label class="form-label small mb-1">Size</label>
                                     <select class="form-select form-select-sm"
                                             value="@(field.FontSize ?? "")"
                                             @onchange="e => OnFontSizeChanged(field, e)">
@@ -67,37 +67,27 @@
                                         <option value="11pt">11pt</option>
                                         <option value="12pt">12pt</option>
                                         <option value="14pt">14pt</option>
-                                        <option value="16pt">16pt</option>
                                     </select>
                                 </div>
-                            </div>
-
-                            <div class="row g-2 mb-2">
-                                <div class="col-6">
+                                <div class="col">
                                     <label class="form-label small mb-1">Color</label>
-                                    <div class="input-group input-group-sm">
-                                        <input type="color"
-                                               class="form-control form-control-color form-control-sm"
-                                               value="@(field.Color ?? Design.SecondaryColor)"
-                                               @onchange="e => OnColorChanged(field, e)"
-                                               style="max-width: 40px;" />
-                                        <input type="text"
-                                               class="form-control form-control-sm"
-                                               placeholder="Default"
-                                               value="@(field.Color ?? "")"
-                                               @onchange="e => OnColorTextChanged(field, e)" />
-                                        @if (!string.IsNullOrEmpty(field.Color))
-                                        {
-                                            <button class="btn btn-outline-secondary btn-sm"
-                                                    type="button"
-                                                    @onclick="() => ClearFieldColor(field)"
-                                                    title="Reset to default">
-                                                <i class="bi bi-x"></i>
-                                            </button>
-                                        }
-                                    </div>
+                                    <select class="form-select form-select-sm"
+                                            value="@(field.Color ?? "")"
+                                            @onchange="e => OnColorChanged(field, e)">
+                                        <option value="">Default</option>
+                                        <optgroup label="Corporate">
+                                            <option value="#3154A5">Sky Blue</option>
+                                            <option value="#26B686">Coastal Green</option>
+                                            <option value="#77787B">Dark Grey</option>
+                                        </optgroup>
+                                        <optgroup label="Base">
+                                            <option value="#747474">Warm Dark Grey</option>
+                                            <option value="#999281">Green Grey</option>
+                                            <option value="#ACA593">Warm Green</option>
+                                        </optgroup>
+                                    </select>
                                 </div>
-                                <div class="col-6 d-flex align-items-end">
+                                <div class="col-auto d-flex align-items-end pb-1">
                                     <div class="form-check">
                                         <input class="form-check-input"
                                                type="checkbox"
@@ -105,7 +95,7 @@
                                                @onchange="e => OnBoldChanged(field, e)"
                                                id="bold-@field.FieldId" />
                                         <label class="form-check-label small" for="bold-@field.FieldId">
-                                            <strong>Bold</strong>
+                                            <strong>B</strong>
                                         </label>
                                     </div>
                                 </div>
@@ -113,7 +103,7 @@
 
                             @if (field.IsCustomField)
                             {
-                                <div class="mb-2">
+                                <div class="mt-2">
                                     <label class="form-label small mb-1">Default Value</label>
                                     <input type="text"
                                            class="form-control form-control-sm"
@@ -172,20 +162,8 @@
 
     private async Task OnColorChanged(TemplateField field, ChangeEventArgs e)
     {
-        field.Color = e.Value?.ToString();
-        await NotifyDesignChanged();
-    }
-
-    private async Task OnColorTextChanged(TemplateField field, ChangeEventArgs e)
-    {
         var value = e.Value?.ToString();
-        field.Color = string.IsNullOrWhiteSpace(value) ? null : value;
-        await NotifyDesignChanged();
-    }
-
-    private async Task ClearFieldColor(TemplateField field)
-    {
-        field.Color = null;
+        field.Color = string.IsNullOrEmpty(value) ? null : value;
         await NotifyDesignChanged();
     }
 

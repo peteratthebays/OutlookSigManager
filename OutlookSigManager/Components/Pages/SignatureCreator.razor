@@ -9,12 +9,13 @@
 @attribute [Authorize]
 @rendermode InteractiveServer
 @inject IGraphUserService GraphUserService
+@inject IUserOverrideStorageService OverrideStorage
 @inject ILogger<SignatureCreator> Logger
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
-<PageTitle>Signature Creator - OutlookSigManager</PageTitle>
+<PageTitle>Signature Creator - Baysig</PageTitle>
 
-<div class="container py-4" style="max-width: 1000px;">
+<div class="container-fluid py-4 px-4">
     <div class="text-center mb-4">
         <h1 class="h2 mb-2">Create Your Email Signature</h1>
         <p class="text-muted">Generate a professional email signature using your company profile</p>
@@ -42,12 +43,17 @@
     else
     {
         <div class="row">
-            <div class="col-lg-6">
+            <div class="col-lg-4 col-xl-3">
                 <UserProfileForm User="@CurrentUser"
                                 Overrides="@FieldOverrides"
-                                OverridesChanged="@OnOverridesChanged" />
+                                OverridesChanged="@OnOverridesChanged"
+                                OnSaveRequested="@SaveOverrides"
+                                HasSavedOverrides="@HasSavedOverrides"
+                                IsSaving="@IsSaving"
+                                SaveSuccess="@SaveSuccess"
+                                SaveError="@SaveError" />
             </div>
-            <div class="col-lg-6">
+            <div class="col-lg-8 col-xl-9">
                 <div class="sticky-top" style="top: 20px;">
                     <SignaturePreview User="@EffectiveUser"
                                      Overrides="@FieldOverrides" />
@@ -62,6 +68,12 @@
     private SignatureFieldOverride FieldOverrides { get; set; } = new();
     private bool IsLoading { get; set; } = true;
     private string? ErrorMessage { get; set; }
+
+    // Save state
+    private bool HasSavedOverrides { get; set; }
+    private bool IsSaving { get; set; }
+    private bool SaveSuccess { get; set; }
+    private string? SaveError { get; set; }
 
     private UserProfile? EffectiveUser => CurrentUser != null
         ? FieldOverrides.ApplyToProfile(CurrentUser)
@@ -105,6 +117,9 @@
             else
             {
                 Logger.LogInformation("Loaded profile for {DisplayName}", CurrentUser.DisplayName);
+
+                // Load saved overrides from local database
+                await LoadSavedOverrides();
             }
         }
         catch (Exception ex)
@@ -118,9 +133,61 @@
         }
     }
 
+    private async Task LoadSavedOverrides()
+    {
+        if (CurrentUser == null) return;
+
+        try
+        {
+            var savedOverride = await OverrideStorage.GetOverrideAsync(CurrentUser.Id);
+            if (savedOverride != null)
+            {
+                FieldOverrides = savedOverride.ToFieldOverride();
+                HasSavedOverrides = true;
+                Logger.LogInformation("Loaded saved overrides for user {UserId}", CurrentUser.Id);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading saved overrides for user {UserId}", CurrentUser?.Id);
+            // Don't fail - just use empty overrides
+        }
+    }
+
+    private async Task SaveOverrides()
+    {
+        if (CurrentUser == null || IsSaving) return;
+
+        IsSaving = true;
+        SaveSuccess = false;
+        SaveError = null;
+
+        try
+        {
+            var userOverride = new UserOverride { UserId = CurrentUser.Id };
+            userOverride.UpdateFrom(FieldOverrides);
+
+            await OverrideStorage.SaveOverrideAsync(userOverride);
+
+            HasSavedOverrides = true;
+            SaveSuccess = true;
+            Logger.LogInformation("Saved overrides for user {UserId}", CurrentUser.Id);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving overrides for user {UserId}", CurrentUser?.Id);
+            SaveError = $"Failed to save: {ex.Message}";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
     private async Task OnOverridesChanged(SignatureFieldOverride overrides)
     {
         FieldOverrides = overrides;
+        SaveSuccess = false; // Clear success message when changes are made
         await Task.CompletedTask;
     }
 }

@@ -152,7 +152,7 @@ public class GraphUserService : IGraphUserService
     {
         try
         {
-            _logger.LogInformation("Updating user {UserId}: Title={Title}, Dept={Dept}, Phone={Phone}, Mobile={Mobile}",
+            _logger.LogInformation("Attempting to update user {UserId}: Title={Title}, Dept={Dept}, Phone={Phone}, Mobile={Mobile}",
                 userId, jobTitle, department, businessPhone, mobilePhone);
 
             var userUpdate = new User
@@ -167,6 +167,10 @@ public class GraphUserService : IGraphUserService
             {
                 userUpdate.BusinessPhones = new List<string> { businessPhone };
             }
+            else
+            {
+                userUpdate.BusinessPhones = new List<string>();
+            }
 
             await _graphClient.Users[userId]
                 .Request()
@@ -175,10 +179,16 @@ public class GraphUserService : IGraphUserService
             _logger.LogInformation("Successfully updated user {UserId}", userId);
             return true;
         }
+        catch (ServiceException ex)
+        {
+            _logger.LogError(ex, "Graph API error updating user {UserId}. Status: {Status}, Code: {Code}, Message: {Message}",
+                userId, ex.StatusCode, ex.Error?.Code, ex.Error?.Message);
+            throw new Exception($"Graph API Error ({ex.StatusCode}): {ex.Error?.Message ?? ex.Message}");
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating user {UserId}", userId);
-            return false;
+            throw;
         }
     }
 

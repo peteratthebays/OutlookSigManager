@@ -68,6 +68,16 @@
                        @bind:after="NotifyChanged" />
             </div>
             <div class="col-md-6">
+                <label class="form-label">Preferred Pronouns</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="e.g., He/Him, She/Her, They/Them"
+                       @bind="Overrides.Pronouns"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+                <small class="text-muted">Appears after your name, e.g., "Jane Smith (She/Her)"</small>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">Job Title Override</label>
                 <input type="text"
                        class="form-control"
@@ -104,6 +114,16 @@
                        @bind:after="NotifyChanged" />
             </div>
             <div class="col-md-6">
+                <label class="form-label">DECT Phone</label>
+                <input type="text"
+                       class="form-control"
+                       placeholder="Internal DECT number"
+                       @bind="Overrides.DectPhone"
+                       @bind:event="oninput"
+                       @bind:after="NotifyChanged" />
+                <small class="text-muted">Optional - shows in signature if enabled in template</small>
+            </div>
+            <div class="col-md-6">
                 <label class="form-label">Working Days</label>
                 <input type="text"
                        class="form-control"
@@ -114,6 +134,42 @@
                 <small class="text-muted">Optional - shows in signature if enabled in template</small>
             </div>
         </div>
+
+        @* Save to local database section *@
+        <hr class="my-3" />
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                @if (HasSavedOverrides)
+                {
+                    <small class="text-muted"><i class="bi bi-check-circle text-success me-1"></i>You have saved preferences</small>
+                }
+                else
+                {
+                    <small class="text-muted">Save your preferences for next time</small>
+                }
+            </div>
+            <button class="btn btn-primary btn-sm"
+                    @onclick="OnSaveRequested"
+                    disabled="@(IsSaving || !Overrides.HasOverrides())">
+                @if (IsSaving)
+                {
+                    <span class="spinner-border spinner-border-sm me-1"></span>
+                }
+                <i class="bi bi-save me-1"></i>Save My Preferences
+            </button>
+        </div>
+        @if (SaveSuccess)
+        {
+            <div class="alert alert-success mt-2 mb-0 py-2">
+                <i class="bi bi-check-circle me-1"></i>Preferences saved! They'll be loaded automatically next time.
+            </div>
+        }
+        @if (SaveError != null)
+        {
+            <div class="alert alert-danger mt-2 mb-0 py-2">
+                <i class="bi bi-exclamation-circle me-1"></i>@SaveError
+            </div>
+        }
     </div>
 </div>
 
@@ -121,6 +177,13 @@
     [Parameter] public UserProfile? User { get; set; }
     [Parameter] public SignatureFieldOverride Overrides { get; set; } = new();
     [Parameter] public EventCallback<SignatureFieldOverride> OverridesChanged { get; set; }
+
+    // Save to local database
+    [Parameter] public EventCallback OnSaveRequested { get; set; }
+    [Parameter] public bool HasSavedOverrides { get; set; }
+    [Parameter] public bool IsSaving { get; set; }
+    [Parameter] public bool SaveSuccess { get; set; }
+    [Parameter] public string? SaveError { get; set; }
 
     private async Task NotifyChanged()
     {

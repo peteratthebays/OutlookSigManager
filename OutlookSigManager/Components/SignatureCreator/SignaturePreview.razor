@@ -8,12 +8,12 @@
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
         <span><i class="bi bi-eye me-2"></i>Your Signature Preview</span>
-        <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshPreview">
-            <i class="bi bi-arrow-clockwise"></i>
+        <button class="btn btn-outline-secondary btn-sm" @onclick="RefreshPreview" title="Refresh preview">
+            <i class="bi bi-arrow-clockwise me-1"></i>Refresh
         </button>
     </div>
     <div class="card-body">
-        <div class="border rounded p-4 bg-white mb-3" style="min-height: 150px;">
+        <div class="border rounded p-4 bg-white mb-3" style="min-height: 150px; overflow-x: auto;">
             @if (IsLoading)
             {
                 <div class="text-center py-3">
@@ -30,7 +30,9 @@
             }
             else if (!string.IsNullOrEmpty(SignatureHtml))
             {
-                @((MarkupString)SignatureHtml)
+                <div style="display: inline-block;">
+                    @((MarkupString)SignatureHtml)
+                </div>
             }
             else
             {
@@ -61,17 +63,74 @@
         @if (CopySuccess)
         {
             <div class="alert alert-success mt-3 mb-0">
-                <h6><i class="bi bi-check-circle-fill me-2"></i>Signature Copied!</h6>
-                <p class="mb-2">Now paste it into Outlook:</p>
-                <ol class="mb-0 small">
-                    <li>Open <strong>Outlook</strong> (web or desktop)</li>
-                    <li>Go to <strong>Settings</strong> <i class="bi bi-arrow-right"></i> <strong>Mail</strong> <i class="bi bi-arrow-right"></i> <strong>Compose and reply</strong></li>
-                    <li>Under <strong>Email signature</strong>, click in the editor</li>
-                    <li>Press <strong>Ctrl+V</strong> (or Cmd+V on Mac) to paste</li>
-                    <li>Click <strong>Save</strong></li>
-                </ol>
+                <i class="bi bi-check-circle-fill me-2"></i><strong>Signature copied to clipboard!</strong> Follow the instructions below to set it up in Outlook.
             </div>
         }
+
+        <!-- Instructions Section -->
+        <div class="mt-4">
+            <h5 class="mb-3"><i class="bi bi-question-circle me-2"></i>How to Set Up Your Signature</h5>
+
+            <!-- Modern/Web Outlook -->
+            <div class="card mb-3">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-globe me-2"></i>Outlook on the Web / New Outlook (Modern)
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Open <a href="https://outlook.office.com" target="_blank">outlook.office.com</a> or the <strong>New Outlook</strong> desktop app</li>
+                        <li>Click the <strong>Settings</strong> cog icon (<i class="bi bi-gear"></i>) in the top-right corner</li>
+                        <li>Select <strong>Account</strong> from the left menu, then click <strong>Signatures</strong></li>
+                        <li>Click <strong>+ New signature</strong> or select an existing signature to edit
+                            <ul>
+                                <li>If editing, select all (Ctrl+A) and delete the existing content first</li>
+                            </ul>
+                        </li>
+                        <li>Click inside the signature editor and press <strong>Ctrl+V</strong> (or <strong>Cmd+V</strong> on Mac) to paste</li>
+                        <li>At the bottom, set your <strong>default signatures</strong>:
+                            <ul>
+                                <li><em>For new messages</em> - select your signature</li>
+                                <li><em>For replies/forwards</em> - select your signature (optional)</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>Save</strong></li>
+                    </ol>
+                </div>
+            </div>
+
+            <!-- Classic Outlook -->
+            <div class="card mb-3">
+                <div class="card-header bg-secondary text-white">
+                    <i class="bi bi-window-desktop me-2"></i>Classic Outlook (Desktop)
+                </div>
+                <div class="card-body">
+                    <ol class="mb-0">
+                        <li>Open <strong>Outlook</strong> desktop application</li>
+                        <li>Click <strong>File</strong> <i class="bi bi-arrow-right"></i> <strong>Options</strong></li>
+                        <li>Select <strong>Mail</strong> from the left panel</li>
+                        <li>Click the <strong>Signatures...</strong> button</li>
+                        <li>In the Signatures and Stationery window:
+                            <ul>
+                                <li>Click <strong>New</strong> to create a new signature, or select an existing one to edit</li>
+                                <li>Give it a name (e.g., "Work Signature")</li>
+                            </ul>
+                        </li>
+                        <li>Click inside the signature editor at the bottom and press <strong>Ctrl+V</strong> to paste</li>
+                        <li>Under <strong>Choose default signature</strong>:
+                            <ul>
+                                <li>Set <strong>New messages</strong> to your signature name</li>
+                                <li>Set <strong>Replies/forwards</strong> to your signature name (optional)</li>
+                            </ul>
+                        </li>
+                        <li>Click <strong>OK</strong> to save</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-lightbulb me-2"></i><strong>Tip:</strong> If images don't appear correctly, make sure you're pasting with formatting (Ctrl+V), not as plain text (Ctrl+Shift+V).
+            </div>
+        </div>
     </div>
 </div>
 

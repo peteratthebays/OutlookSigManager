@@ -10,17 +10,20 @@
             <i class="bi bi-arrow-clockwise"></i>
         </button>
     </div>
-    <div class="card-body">
-        <div class="border rounded p-3 bg-white" style="min-height: 150px; overflow: auto; max-width: 100%;">
+    <div class="card-body p-2">
+        <div class="border rounded p-3 bg-white" style="min-height: 150px; overflow-x: auto; overflow-y: visible;">
             @if (!string.IsNullOrEmpty(PreviewHtml))
             {
-                @((MarkupString)PreviewHtml)
+                <div style="display: inline-block;">
+                    @((MarkupString)PreviewHtml)
+                </div>
             }
             else
             {
                 <p class="text-muted fst-italic">Preview will appear here</p>
             }
         </div>
+        <small class="text-muted mt-1 d-block">Signature width: @(Design.SignatureWidth)px</small>
     </div>
 </div>
 

@@ -8,7 +8,7 @@
 @inject IGraphUserService GraphUserService
 @inject ILogger<UserAudit> Logger
 
-<PageTitle>User Audit - OutlookSigManager</PageTitle>
+<PageTitle>User Audit - Baysig</PageTitle>
 
 <div class="container-fluid py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
@@ -50,7 +50,7 @@
                 <li><strong>Click on any cell</strong> to edit the value inline</li>
                 <li><strong>Yellow highlighting</strong> indicates unsaved changes</li>
                 <li><strong>Save</strong> individual rows or use "Save All" for batch updates</li>
-                <li>Changes are saved directly to <strong>Entra ID (Azure AD)</strong></li>
+                <li>Changes are saved to the <strong>local database</strong> as overrides</li>
                 <li><strong>Display Name</strong> and <strong>Email</strong> are read-only (managed by IT)</li>
             </ul>
         </div>

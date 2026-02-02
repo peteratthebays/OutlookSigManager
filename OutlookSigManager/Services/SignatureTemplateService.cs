@@ -172,22 +172,25 @@ public partial class SignatureTemplateService : ISignatureTemplateService
         // Apply overrides if provided
         var effectiveUser = overrides != null ? overrides.ApplyToProfile(user) : user;
         var workingDays = overrides?.WorkingDays;
+        var pronouns = overrides?.Pronouns;
+        var dectPhone = overrides?.DectPhone;
 
         var sb = new StringBuilder();
 
-        // Start main table with configurable font
-        sb.AppendLine($"<table style=\"font-family: {design.FontFamily}; font-size: {design.FontSize};\">");
+        // Start main table with configurable font and total width
+        sb.AppendLine($"<table style=\"font-family: {design.FontFamily}; font-size: {design.FontSize}; width: {design.SignatureWidth}px;\">");
         sb.AppendLine("  <tr>");
 
-        // Logo column (if logo is present)
+        // Logo column (if logo is present) - uses explicit width to prevent equal column split
         if (!string.IsNullOrEmpty(design.LogoBase64))
         {
-            sb.AppendLine($"    <td style=\"padding-right: 15px; border-right: 2px solid {design.PrimaryColor}; vertical-align: top;\">");
+            var logoColumnWidth = design.LogoWidth + 15; // Logo width + padding
+            sb.AppendLine($"    <td style=\"width: {logoColumnWidth}px; padding-right: 15px; border-right: 2px solid {design.DividerColor}; vertical-align: middle;\">");
             sb.AppendLine($"      <img src=\"data:image/png;base64,{design.LogoBase64}\" alt=\"Logo\" width=\"{design.LogoWidth}\" />");
             sb.AppendLine("    </td>");
         }
 
-        // Content column
+        // Content column - fills remaining space
         var contentPadding = !string.IsNullOrEmpty(design.LogoBase64) ? "padding-left: 15px;" : "";
         sb.AppendLine($"    <td style=\"{contentPadding} vertical-align: top;\">");
 
@@ -196,31 +199,64 @@ public partial class SignatureTemplateService : ISignatureTemplateService
             .Where(f => f.IsEnabled)
             .OrderBy(f => f.SortOrder);
 
+        // Check if DECT field is enabled in template
+        var isDectEnabled = design.Fields.Any(f => f.FieldId.Equals("dectPhone", StringComparison.OrdinalIgnoreCase) && f.IsEnabled);
+
+        // Track field categories for spacing
+        var identityFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "name", "jobtitle", "department" };
+        var contactFields = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+            { "businessphone", "dectphone", "mobilephone", "email", "workingdays" };
+
+        string? lastRenderedFieldId = null;
+        bool inContactSection = false;
+
         foreach (var field in enabledFields)
         {
-            var value = GetFieldValue(field, effectiveUser, workingDays);
+            var value = GetFieldValue(field, effectiveUser, workingDays, pronouns, dectPhone, isDectEnabled);
             if (string.IsNullOrWhiteSpace(value))
                 continue;
 
-            var displayValue = !string.IsNullOrEmpty(field.Prefix) ? $"{field.Prefix}{value}" : value;
+            // Skip prefix if value already starts with "DECT:" (DECT-only case)
+            var usePrefix = !string.IsNullOrEmpty(field.Prefix) && !value.StartsWith("DECT:");
+            var displayValue = usePrefix ? $"{field.Prefix}{value}" : value;
             var style = GetFieldStyle(field, design);
 
-            sb.AppendLine($"      <p style=\"margin: 0; {style}\">{System.Net.WebUtility.HtmlEncode(displayValue)}</p>");
+            // Determine margin based on field type
+            string margin;
+            if (contactFields.Contains(field.FieldId))
+            {
+                if (!inContactSection)
+                {
+                    // First contact field - gap to separate from identity section
+                    margin = "margin: 8px 0 0 0;";
+                    inContactSection = true;
+                }
+                else
+                {
+                    // Subsequent contact fields - no gap (condensed)
+                    margin = "margin: 0;";
+                }
+            }
+            else
+            {
+                // Identity fields - no gap
+                margin = "margin: 0;";
+            }
+
+            sb.AppendLine($"      <p style=\"{margin} {style}\">{System.Net.WebUtility.HtmlEncode(displayValue)}</p>");
+
+            lastRenderedFieldId = field.FieldId;
+        }
+
+        // Address (if present) - no gap, same as contact fields
+        if (!string.IsNullOrEmpty(design.Address))
+        {
+            sb.AppendLine($"      <p style=\"margin: 0; color: {design.SecondaryColor};\">{System.Net.WebUtility.HtmlEncode(design.Address)}</p>");
         }
 
         sb.AppendLine("    </td>");
         sb.AppendLine("  </tr>");
-
-        // Disclaimer row (if present)
-        if (!string.IsNullOrEmpty(design.DisclaimerText))
-        {
-            var colspan = !string.IsNullOrEmpty(design.LogoBase64) ? "2" : "1";
-            sb.AppendLine("  <tr>");
-            sb.AppendLine($"    <td colspan=\"{colspan}\" style=\"padding-top: 10px; font-size: 8pt; color: {design.SecondaryColor};\">");
-            sb.AppendLine($"      {System.Net.WebUtility.HtmlEncode(design.DisclaimerText)}");
-            sb.AppendLine("    </td>");
-            sb.AppendLine("  </tr>");
-        }
 
         // Banner logo row (if present)
         if (!string.IsNullOrEmpty(design.BannerLogoBase64))
@@ -245,6 +281,17 @@ public partial class SignatureTemplateService : ISignatureTemplateService
             sb.AppendLine("  </tr>");
         }
 
+        // Disclaimer row (if present) - appears last
+        if (!string.IsNullOrEmpty(design.DisclaimerText))
+        {
+            var colspan = !string.IsNullOrEmpty(design.LogoBase64) ? "2" : "1";
+            sb.AppendLine("  <tr>");
+            sb.AppendLine($"    <td colspan=\"{colspan}\" style=\"padding-top: 10px; font-size: 8pt; color: {design.SecondaryColor};\">");
+            sb.AppendLine($"      {System.Net.WebUtility.HtmlEncode(design.DisclaimerText)}");
+            sb.AppendLine("    </td>");
+            sb.AppendLine("  </tr>");
+        }
+
         sb.AppendLine("</table>");
 
         return sb.ToString();
@@ -256,19 +303,103 @@ public partial class SignatureTemplateService : ISignatureTemplateService
         return GenerateHtmlFromDesign(design, user, overrides);
     }
 
-    private static string GetFieldValue(TemplateField field, UserProfile user, string? workingDays)
+    private static string GetFieldValue(TemplateField field, UserProfile user, string? workingDays, string? pronouns, string? dectPhone, bool isDectEnabled)
     {
         return field.FieldId.ToLowerInvariant() switch
         {
-            "name" => user.DisplayName,
+            "name" => FormatNameWithPronouns(user.DisplayName, pronouns),
             "jobtitle" => user.JobTitle ?? string.Empty,
             "department" => user.Department ?? string.Empty,
             "email" => user.Mail ?? string.Empty,
-            "businessphone" => user.BusinessPhone ?? string.Empty,
-            "mobilephone" => user.MobilePhone ?? string.Empty,
-            "workingdays" => workingDays ?? field.DefaultValue ?? string.Empty,
+            "businessphone" => FormatBusinessPhoneWithDect(user.BusinessPhone, isDectEnabled ? dectPhone : null),
+            "dectphone" => string.Empty,  // DECT is shown with business phone when enabled
+            "mobilephone" => FormatAustralianMobile(user.MobilePhone),
+            "workingdays" => workingDays ?? string.Empty,
             _ => field.DefaultValue ?? string.Empty
         };
+    }
+
+    private static string FormatBusinessPhoneWithDect(string? businessPhone, string? dectPhone)
+    {
+        var formattedBusiness = FormatAustralianLandline(businessPhone);
+        var hasBusiness = !string.IsNullOrWhiteSpace(formattedBusiness);
+        var hasDect = !string.IsNullOrWhiteSpace(dectPhone);
+
+        if (hasBusiness && hasDect)
+        {
+            return $"{formattedBusiness} | DECT: {dectPhone}";
+        }
+        else if (hasDect)
+        {
+            return $"DECT: {dectPhone}";
+        }
+        else
+        {
+            return formattedBusiness;
+        }
+    }
+
+    private static string FormatNameWithPronouns(string name, string? pronouns)
+    {
+        var normalizedPronouns = SignatureFieldOverride.NormalizePronouns(pronouns);
+        if (string.IsNullOrEmpty(normalizedPronouns))
+            return name;
+
+        return $"{name} ({normalizedPronouns})";
+    }
+
+    private static string FormatAustralianMobile(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+            return string.Empty;
+
+        // Strip all non-digit characters
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+        // Handle +61 prefix (convert to 0)
+        if (digits.StartsWith("61") && digits.Length == 11)
+        {
+            digits = "0" + digits.Substring(2);
+        }
+
+        // Format as 04xx xxx xxx if it's a valid Australian mobile
+        if (digits.Length == 10 && digits.StartsWith("04"))
+        {
+            return $"{digits.Substring(0, 4)} {digits.Substring(4, 3)} {digits.Substring(7, 3)}";
+        }
+
+        // Return original if not a standard Australian mobile format
+        return phone;
+    }
+
+    private static string FormatAustralianLandline(string? phone)
+    {
+        if (string.IsNullOrWhiteSpace(phone))
+            return string.Empty;
+
+        // Strip all non-digit characters
+        var digits = new string(phone.Where(char.IsDigit).ToArray());
+
+        // Handle +61 prefix (convert to 0)
+        if (digits.StartsWith("61") && digits.Length == 11)
+        {
+            digits = "0" + digits.Substring(2);
+        }
+
+        // If 8 digits, assume Melbourne (03) area code
+        if (digits.Length == 8)
+        {
+            digits = "03" + digits;
+        }
+
+        // Format as (0x) xxxx xxxx if it's a valid Australian landline (10 digits starting with 02, 03, 07, 08)
+        if (digits.Length == 10 && (digits.StartsWith("02") || digits.StartsWith("03") || digits.StartsWith("07") || digits.StartsWith("08")))
+        {
+            return $"({digits.Substring(0, 2)}) {digits.Substring(2, 4)} {digits.Substring(6, 4)}";
+        }
+
+        // Return original if not a standard Australian landline format
+        return phone;
     }
 
     private static string GetFieldStyle(TemplateField field, TemplateDesign design)

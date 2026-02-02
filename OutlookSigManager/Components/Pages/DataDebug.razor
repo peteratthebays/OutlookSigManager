@@ -1,0 +1,120 @@
+@page "/data-debug"
+@using Microsoft.AspNetCore.Authorization
+@using OutlookSigManager.Services
+@using OutlookSigManager.Models
+@attribute [Authorize(Policy = "AdminOnly")]
+@rendermode InteractiveServer
+@inject IUserOverrideStorageService OverrideStorage
+@inject ITemplateStorageService TemplateStorage
+
+<PageTitle>Data Debug - Baysig</PageTitle>
+
+<div class="container py-4">
+    <h1>Data Debug</h1>
+    <p class="text-muted">View raw data stored in the database. Admin only.</p>
+
+    <div class="card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <span><i class="bi bi-database me-2"></i>User Overrides (@Overrides.Count records)</span>
+            <button class="btn btn-sm btn-outline-primary" @onclick="LoadData">
+                <i class="bi bi-arrow-clockwise"></i> Refresh
+            </button>
+        </div>
+        <div class="card-body p-0">
+            @if (Overrides.Any())
+            {
+                <table class="table table-sm table-striped mb-0">
+                    <thead>
+                        <tr>
+                            <th>UserId</th>
+                            <th>JobTitle</th>
+                            <th>Department</th>
+                            <th>BusinessPhone</th>
+                            <th>MobilePhone</th>
+                            <th>Pronouns</th>
+                            <th>DECT</th>
+                            <th>WorkingDays</th>
+                            <th>LastModified</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var o in Overrides)
+                        {
+                            <tr>
+                                <td><code style="font-size: 0.7em;">@o.UserId</code></td>
+                                <td>@(o.OverrideJobTitle ?? "<null>")</td>
+                                <td>@(o.OverrideDepartment ?? "<null>")</td>
+                                <td>@(o.OverrideBusinessPhone ?? "<null>")</td>
+                                <td>@(o.OverrideMobilePhone ?? "<null>")</td>
+                                <td>@(o.Pronouns ?? "<null>")</td>
+                                <td>@(o.DectPhone ?? "<null>")</td>
+                                <td>@(o.WorkingDays ?? "<null>")</td>
+                                <td>@o.LastModified.ToString("yyyy-MM-dd HH:mm:ss")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="text-muted p-3 mb-0">No user overrides found.</p>
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <i class="bi bi-file-earmark-code me-2"></i>Template (SchemaVersion: @Template?.SchemaVersion)
+        </div>
+        <div class="card-body">
+            @if (Template != null)
+            {
+                <dl class="row mb-0">
+                    <dt class="col-sm-3">Name</dt>
+                    <dd class="col-sm-9">@Template.Name</dd>
+
+                    <dt class="col-sm-3">SignatureWidth</dt>
+                    <dd class="col-sm-9">@Template.SignatureWidth px</dd>
+
+                    <dt class="col-sm-3">FontFamily</dt>
+                    <dd class="col-sm-9">@Template.FontFamily</dd>
+
+                    <dt class="col-sm-3">Colors</dt>
+                    <dd class="col-sm-9">Primary: @Template.PrimaryColor, Secondary: @Template.SecondaryColor</dd>
+
+                    <dt class="col-sm-3">Has Logo</dt>
+                    <dd class="col-sm-9">@(!string.IsNullOrEmpty(Template.LogoBase64) ? "Yes" : "No")</dd>
+
+                    <dt class="col-sm-3">Has Banner</dt>
+                    <dd class="col-sm-9">@(!string.IsNullOrEmpty(Template.BannerLogoBase64) ? "Yes" : "No")</dd>
+
+                    <dt class="col-sm-3">Fields</dt>
+                    <dd class="col-sm-9">
+                        @foreach (var f in Template.Fields.OrderBy(f => f.SortOrder))
+                        {
+                            <span class="badge @(f.IsEnabled ? "bg-success" : "bg-secondary") me-1">
+                                @f.FieldId @(f.IsEnabled ? "" : "(disabled)")
+                            </span>
+                        }
+                    </dd>
+                </dl>
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private IReadOnlyList<UserOverride> Overrides { get; set; } = Array.Empty<UserOverride>();
+    private TemplateDesign? Template { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        Overrides = await OverrideStorage.GetAllOverridesAsync();
+        Template = await TemplateStorage.GetTemplateAsync();
+    }
+}

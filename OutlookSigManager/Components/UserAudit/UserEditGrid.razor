@@ -2,6 +2,7 @@
 @using OutlookSigManager.Models
 @using OutlookSigManager.Services
 @inject IGraphUserService GraphUserService
+@inject IUserOverrideStorageService OverrideStorage
 @inject ILogger<UserEditGrid> Logger
 
 <div class="card">
@@ -36,16 +37,29 @@
             </div>
         }
 
+        @if (SelectedErrorUser != null)
+        {
+            <div class="alert alert-danger m-3 alert-dismissible" role="alert">
+                <h6><i class="bi bi-exclamation-triangle-fill me-2"></i>Error saving @SelectedErrorUser.DisplayName</h6>
+                <hr class="my-2" />
+                <pre class="mb-0 small" style="white-space: pre-wrap;">@SelectedErrorUser.SaveError</pre>
+                <button type="button" class="btn-close" @onclick="() => SelectedErrorUser = null"></button>
+            </div>
+        }
+
         <div class="table-responsive" style="max-height: 600px; overflow-y: auto;">
             <table class="table table-hover table-sm mb-0">
                 <thead class="table-light sticky-top">
                     <tr>
-                        <th style="width: 200px;">Display Name</th>
-                        <th style="width: 220px;">Email</th>
+                        <th style="width: 180px;">Display Name</th>
+                        <th style="width: 200px;">Email</th>
                         <th>Job Title</th>
                         <th>Department</th>
                         <th>Business Phone</th>
                         <th>Mobile Phone</th>
+                        <th>Pronouns</th>
+                        <th>DECT</th>
+                        <th>Working Days</th>
                         <th style="width: 100px;">Actions</th>
                     </tr>
                 </thead>
@@ -53,7 +67,7 @@
                     @if (IsLoading)
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-4">
+                            <td colspan="10" class="text-center py-4">
                                 <span class="spinner-border spinner-border-sm me-2"></span>
                                 Loading users...
                             </td>
@@ -62,7 +76,7 @@
                     else if (!FilteredUsers.Any())
                     {
                         <tr>
-                            <td colspan="7" class="text-center py-4 text-muted">
+                            <td colspan="10" class="text-center py-4 text-muted">
                                 @if (Users.Count == 0)
                                 {
                                     <span>No users found. Click refresh to load users.</span>
@@ -78,10 +92,14 @@
                     {
                         @foreach (var user in FilteredUsers)
                         {
-                            var rowClass = user.IsDirty ? "table-warning" : (user.SaveError != null ? "table-danger" : "");
+                            var rowClass = user.IsDirty ? "table-warning" : (user.HasOverride ? "table-info" : (user.SaveError != null ? "table-danger" : ""));
                             <tr class="@rowClass">
                                 <td>
                                     <strong>@user.DisplayName</strong>
+                                    @if (user.HasOverride)
+                                    {
+                                        <i class="bi bi-database-fill text-info ms-1" title="Has saved overrides"></i>
+                                    }
                                 </td>
                                 <td>
                                     <small class="text-muted">@user.Mail</small>
@@ -98,6 +116,15 @@
                                 <InlineEditCell Value="@user.MobilePhone"
                                                ValueChanged="@(v => OnFieldChanged(user, nameof(user.MobilePhone), v))"
                                                IsDirty="@(user.MobilePhone != user.OriginalMobilePhone)" />
+                                <InlineEditCell Value="@user.Pronouns"
+                                               ValueChanged="@(v => OnFieldChanged(user, nameof(user.Pronouns), v))"
+                                               IsDirty="@(user.Pronouns != user.OriginalPronouns)" />
+                                <InlineEditCell Value="@user.DectPhone"
+                                               ValueChanged="@(v => OnFieldChanged(user, nameof(user.DectPhone), v))"
+                                               IsDirty="@(user.DectPhone != user.OriginalDectPhone)" />
+                                <InlineEditCell Value="@user.WorkingDays"
+                                               ValueChanged="@(v => OnFieldChanged(user, nameof(user.WorkingDays), v))"
+                                               IsDirty="@(user.WorkingDays != user.OriginalWorkingDays)" />
                                 <td>
                                     @if (user.IsSaving)
                                     {
@@ -123,9 +150,11 @@
                                     }
                                     else if (user.SaveError != null)
                                     {
-                                        <span class="text-danger" title="@user.SaveError">
-                                            <i class="bi bi-exclamation-circle"></i>
-                                        </span>
+                                        <button class="btn btn-outline-danger btn-sm"
+                                                @onclick="() => ShowError(user)"
+                                                title="Click to see error details">
+                                            <i class="bi bi-exclamation-circle"></i> Error
+                                        </button>
                                     }
                                     else
                                     {
@@ -170,6 +199,7 @@
     private bool IsLoading { get; set; }
     private bool IsSavingAll { get; set; }
     private string? ErrorMessage { get; set; }
+    private EditableUserProfile? SelectedErrorUser { get; set; }
 
     private IEnumerable<EditableUserProfile> FilteredUsers
     {
@@ -189,12 +219,38 @@
 
     private int DirtyCount => Users.Count(u => u.IsDirty);
 
-    protected override void OnParametersSet()
+    protected override async Task OnParametersSetAsync()
     {
         if (InitialUsers.Count > 0 && Users.Count == 0)
         {
-            Users = InitialUsers.Select(EditableUserProfile.FromUserProfile).ToList();
+            await LoadUsersWithOverrides(InitialUsers);
         }
+    }
+
+    private async Task LoadUsersWithOverrides(IReadOnlyList<UserProfile> users)
+    {
+        var editableUsers = users.Select(EditableUserProfile.FromUserProfile).ToList();
+
+        // Load all overrides from database
+        var allOverrides = await OverrideStorage.GetAllOverridesAsync();
+        var overrideDict = allOverrides.ToDictionary(o => o.UserId, o => o);
+
+        // Apply overrides to each user
+        foreach (var user in editableUsers)
+        {
+            if (overrideDict.TryGetValue(user.Id, out var savedOverride))
+            {
+                Logger.LogInformation(
+                    "Applying override for {UserId}: Dept={Dept}, Phone={Phone}, Mobile={Mobile}",
+                    user.Id,
+                    savedOverride.OverrideDepartment,
+                    savedOverride.OverrideBusinessPhone,
+                    savedOverride.OverrideMobilePhone);
+                user.ApplyOverride(savedOverride);
+            }
+        }
+
+        Users = editableUsers;
     }
 
     private async Task RefreshUsers()
@@ -207,7 +263,7 @@
         try
         {
             var users = await GraphUserService.GetAllUsersAsync();
-            Users = users.Select(EditableUserProfile.FromUserProfile).ToList();
+            await LoadUsersWithOverrides(users);
             await OnRefreshRequested.InvokeAsync();
         }
         catch (Exception ex)
@@ -237,6 +293,15 @@
             case nameof(EditableUserProfile.MobilePhone):
                 user.MobilePhone = value;
                 break;
+            case nameof(EditableUserProfile.Pronouns):
+                user.Pronouns = value;
+                break;
+            case nameof(EditableUserProfile.DectPhone):
+                user.DectPhone = value;
+                break;
+            case nameof(EditableUserProfile.WorkingDays):
+                user.WorkingDays = value;
+                break;
         }
 
         user.CheckDirty();
@@ -254,25 +319,23 @@
 
         try
         {
-            Logger.LogInformation("Saving user {UserId}: Title={Title}, Dept={Dept}", user.Id, user.JobTitle, user.Department);
+            var userOverride = user.ToUserOverride();
 
-            var success = await GraphUserService.UpdateUserAsync(
+            Logger.LogInformation(
+                "Saving user override {UserId}: Title={Title}, Dept={Dept}, Phone={Phone}, Mobile={Mobile}, Pronouns={Pronouns}, DECT={Dect}, WorkingDays={WorkingDays}",
                 user.Id,
-                user.JobTitle,
-                user.Department,
-                user.BusinessPhone,
-                user.MobilePhone);
+                userOverride.OverrideJobTitle,
+                userOverride.OverrideDepartment,
+                userOverride.OverrideBusinessPhone,
+                userOverride.OverrideMobilePhone,
+                userOverride.Pronouns,
+                userOverride.DectPhone,
+                userOverride.WorkingDays);
 
-            if (success)
-            {
-                user.AcceptChanges();
-                Logger.LogInformation("Successfully updated user {UserId}", user.Id);
-            }
-            else
-            {
-                user.SaveError = "Failed to save changes. Please try again.";
-                Logger.LogWarning("UpdateUserAsync returned false for user {UserId}", user.Id);
-            }
+            await OverrideStorage.SaveOverrideAsync(userOverride);
+
+            user.AcceptChanges();
+            Logger.LogInformation("Successfully saved override for user {UserId}", user.Id);
         }
         catch (Exception ex)
         {
@@ -289,6 +352,12 @@
     private void RevertUser(EditableUserProfile user)
     {
         user.RevertChanges();
+        StateHasChanged();
+    }
+
+    private void ShowError(EditableUserProfile user)
+    {
+        SelectedErrorUser = user;
         StateHasChanged();
     }
 
@@ -319,8 +388,8 @@
         StateHasChanged();
     }
 
-    public void UpdateUsers(IReadOnlyList<UserProfile> users)
+    public async Task UpdateUsers(IReadOnlyList<UserProfile> users)
     {
-        Users = users.Select(EditableUserProfile.FromUserProfile).ToList();
+        await LoadUsersWithOverrides(users);
     }
 }

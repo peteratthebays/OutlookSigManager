@@ -7,12 +7,35 @@
     </div>
     <div class="card-body">
         <div class="mb-3">
+            <label class="form-label">Signature Width</label>
+            <div class="d-flex align-items-center gap-2">
+                <input type="range"
+                       class="form-range flex-grow-1"
+                       min="250"
+                       max="600"
+                       value="@Design.SignatureWidth"
+                       @onchange="OnSignatureWidthChanged" />
+                <div class="input-group" style="width: 120px;">
+                    <input type="number"
+                           class="form-control form-control-sm"
+                           min="250"
+                           max="600"
+                           value="@Design.SignatureWidth"
+                           @onchange="OnSignatureWidthChanged" />
+                    <span class="input-group-text input-group-text-sm">px</span>
+                </div>
+            </div>
+            <small class="text-muted">Total width of the signature block</small>
+        </div>
+
+        <div class="mb-3">
             <label class="form-label">Font Family</label>
             <select class="form-select"
                     value="@Design.FontFamily"
                     @onchange="OnFontFamilyChanged">
-                <option value="Arial, sans-serif">Arial</option>
+                <option value="Roboto, Calibri, sans-serif">Roboto (Brand Default)</option>
                 <option value="Calibri, sans-serif">Calibri</option>
+                <option value="Arial, sans-serif">Arial</option>
                 <option value="Georgia, serif">Georgia</option>
                 <option value="'Times New Roman', serif">Times New Roman</option>
                 <option value="Verdana, sans-serif">Verdana</option>
@@ -37,36 +60,67 @@
 
         <div class="mb-3">
             <label class="form-label">Primary Color</label>
-            <div class="input-group">
-                <input type="color"
-                       class="form-control form-control-color"
-                       value="@Design.PrimaryColor"
-                       @onchange="OnPrimaryColorChanged"
-                       title="Choose primary color" />
-                <input type="text"
-                       class="form-control"
-                       value="@Design.PrimaryColor"
-                       @onchange="OnPrimaryColorTextChanged"
-                       style="max-width: 100px;" />
+            <select class="form-select"
+                    value="@Design.PrimaryColor"
+                    @onchange="OnPrimaryColorChanged">
+                <optgroup label="Corporate">
+                    <option value="#3154A5">Sky Blue (Brand Default)</option>
+                    <option value="#26B686">Coastal Green</option>
+                    <option value="#77787B">Dark Grey</option>
+                </optgroup>
+                <optgroup label="Clinical Divisions">
+                    <option value="#FBAA34">Rich Sandy Yellow (Surgical)</option>
+                    <option value="#41C5E5">Water Blue (Oncology)</option>
+                    <option value="#72216D">Dusk Purple (Aged Care)</option>
+                </optgroup>
+            </select>
+            <div class="mt-1 d-flex align-items-center gap-2">
+                <div style="width: 24px; height: 24px; background-color: @Design.PrimaryColor; border: 1px solid #ccc; border-radius: 4px;"></div>
+                <small class="text-muted">Used for name and accents</small>
             </div>
-            <small class="text-muted">Used for name and accents</small>
         </div>
 
         <div class="mb-3">
             <label class="form-label">Secondary Color</label>
-            <div class="input-group">
-                <input type="color"
-                       class="form-control form-control-color"
-                       value="@Design.SecondaryColor"
-                       @onchange="OnSecondaryColorChanged"
-                       title="Choose secondary color" />
-                <input type="text"
-                       class="form-control"
-                       value="@Design.SecondaryColor"
-                       @onchange="OnSecondaryColorTextChanged"
-                       style="max-width: 100px;" />
+            <select class="form-select"
+                    value="@Design.SecondaryColor"
+                    @onchange="OnSecondaryColorChanged">
+                <optgroup label="Corporate">
+                    <option value="#77787B">Dark Grey (Brand Default)</option>
+                    <option value="#747474">Warm Dark Grey</option>
+                    <option value="#999281">Green Grey</option>
+                </optgroup>
+                <optgroup label="Base Palette">
+                    <option value="#ACA593">Warm Green</option>
+                    <option value="#D1C6B0">Warm Tan</option>
+                </optgroup>
+            </select>
+            <div class="mt-1 d-flex align-items-center gap-2">
+                <div style="width: 24px; height: 24px; background-color: @Design.SecondaryColor; border: 1px solid #ccc; border-radius: 4px;"></div>
+                <small class="text-muted">Used for other text</small>
             </div>
-            <small class="text-muted">Used for other text</small>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Divider Color</label>
+            <select class="form-select"
+                    value="@Design.DividerColor"
+                    @onchange="OnDividerColorChanged">
+                <optgroup label="Corporate">
+                    <option value="#3154A5">Sky Blue (Brand Default)</option>
+                    <option value="#26B686">Coastal Green</option>
+                    <option value="#77787B">Dark Grey</option>
+                </optgroup>
+                <optgroup label="Clinical Divisions">
+                    <option value="#FBAA34">Rich Sandy Yellow (Surgical)</option>
+                    <option value="#41C5E5">Water Blue (Oncology)</option>
+                    <option value="#72216D">Dusk Purple (Aged Care)</option>
+                </optgroup>
+            </select>
+            <div class="mt-1 d-flex align-items-center gap-2">
+                <div style="width: 24px; height: 24px; background-color: @Design.DividerColor; border: 1px solid #ccc; border-radius: 4px;"></div>
+                <small class="text-muted">Line between logo and content</small>
+            </div>
         </div>
     </div>
 </div>
@@ -78,6 +132,15 @@
     private async Task NotifyDesignChanged()
     {
         await DesignChanged.InvokeAsync(Design);
+    }
+
+    private async Task OnSignatureWidthChanged(ChangeEventArgs e)
+    {
+        if (int.TryParse(e.Value?.ToString(), out var width))
+        {
+            Design.SignatureWidth = Math.Clamp(width, 250, 600);
+            await NotifyDesignChanged();
+        }
     }
 
     private async Task OnFontFamilyChanged(ChangeEventArgs e)
@@ -94,33 +157,19 @@
 
     private async Task OnPrimaryColorChanged(ChangeEventArgs e)
     {
-        Design.PrimaryColor = e.Value?.ToString() ?? "#0066cc";
+        Design.PrimaryColor = e.Value?.ToString() ?? "#3154A5";
         await NotifyDesignChanged();
-    }
-
-    private async Task OnPrimaryColorTextChanged(ChangeEventArgs e)
-    {
-        var value = e.Value?.ToString();
-        if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("#"))
-        {
-            Design.PrimaryColor = value;
-            await NotifyDesignChanged();
-        }
     }
 
     private async Task OnSecondaryColorChanged(ChangeEventArgs e)
     {
-        Design.SecondaryColor = e.Value?.ToString() ?? "#666666";
+        Design.SecondaryColor = e.Value?.ToString() ?? "#77787B";
         await NotifyDesignChanged();
     }
 
-    private async Task OnSecondaryColorTextChanged(ChangeEventArgs e)
+    private async Task OnDividerColorChanged(ChangeEventArgs e)
     {
-        var value = e.Value?.ToString();
-        if (!string.IsNullOrWhiteSpace(value) && value.StartsWith("#"))
-        {
-            Design.SecondaryColor = value;
-            await NotifyDesignChanged();
-        }
+        Design.DividerColor = e.Value?.ToString() ?? "#3154A5";
+        await NotifyDesignChanged();
     }
 }

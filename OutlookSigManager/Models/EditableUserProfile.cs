@@ -11,16 +11,25 @@ public class EditableUserProfile
     public string? BusinessPhone { get; set; }
     public string? MobilePhone { get; set; }
 
+    // Custom override fields (stored in local DB only)
+    public string? Pronouns { get; set; }
+    public string? DectPhone { get; set; }
+    public string? WorkingDays { get; set; }
+
     // Change tracking
     public bool IsDirty { get; set; } = false;
     public bool IsSaving { get; set; } = false;
     public string? SaveError { get; set; }
+    public bool HasOverride { get; set; } = false;
 
     // Original values for dirty checking
     public string? OriginalJobTitle { get; set; }
     public string? OriginalDepartment { get; set; }
     public string? OriginalBusinessPhone { get; set; }
     public string? OriginalMobilePhone { get; set; }
+    public string? OriginalPronouns { get; set; }
+    public string? OriginalDectPhone { get; set; }
+    public string? OriginalWorkingDays { get; set; }
 
     /// <summary>
     /// Creates an editable profile from an immutable UserProfile.
@@ -44,6 +53,57 @@ public class EditableUserProfile
     }
 
     /// <summary>
+    /// Applies saved overrides from the database.
+    /// </summary>
+    public void ApplyOverride(UserOverride? savedOverride)
+    {
+        if (savedOverride == null) return;
+
+        HasOverride = true;
+
+        // Apply overrides (override Entra values if set)
+        if (!string.IsNullOrWhiteSpace(savedOverride.OverrideJobTitle))
+            JobTitle = savedOverride.OverrideJobTitle;
+        if (!string.IsNullOrWhiteSpace(savedOverride.OverrideDepartment))
+            Department = savedOverride.OverrideDepartment;
+        if (!string.IsNullOrWhiteSpace(savedOverride.OverrideBusinessPhone))
+            BusinessPhone = savedOverride.OverrideBusinessPhone;
+        if (!string.IsNullOrWhiteSpace(savedOverride.OverrideMobilePhone))
+            MobilePhone = savedOverride.OverrideMobilePhone;
+
+        Pronouns = savedOverride.Pronouns;
+        DectPhone = savedOverride.DectPhone;
+        WorkingDays = savedOverride.WorkingDays;
+
+        // Update original values to match (so they don't show as dirty)
+        OriginalJobTitle = JobTitle;
+        OriginalDepartment = Department;
+        OriginalBusinessPhone = BusinessPhone;
+        OriginalMobilePhone = MobilePhone;
+        OriginalPronouns = Pronouns;
+        OriginalDectPhone = DectPhone;
+        OriginalWorkingDays = WorkingDays;
+    }
+
+    /// <summary>
+    /// Creates a UserOverride from current values.
+    /// </summary>
+    public UserOverride ToUserOverride()
+    {
+        return new UserOverride
+        {
+            UserId = Id,
+            OverrideJobTitle = JobTitle,
+            OverrideDepartment = Department,
+            OverrideBusinessPhone = BusinessPhone,
+            OverrideMobilePhone = MobilePhone,
+            Pronouns = Pronouns,
+            DectPhone = DectPhone,
+            WorkingDays = WorkingDays
+        };
+    }
+
+    /// <summary>
     /// Checks if any editable field has changed from its original value.
     /// </summary>
     public void CheckDirty()
@@ -51,7 +111,10 @@ public class EditableUserProfile
         IsDirty = JobTitle != OriginalJobTitle ||
                   Department != OriginalDepartment ||
                   BusinessPhone != OriginalBusinessPhone ||
-                  MobilePhone != OriginalMobilePhone;
+                  MobilePhone != OriginalMobilePhone ||
+                  Pronouns != OriginalPronouns ||
+                  DectPhone != OriginalDectPhone ||
+                  WorkingDays != OriginalWorkingDays;
     }
 
     /// <summary>
@@ -63,8 +126,12 @@ public class EditableUserProfile
         OriginalDepartment = Department;
         OriginalBusinessPhone = BusinessPhone;
         OriginalMobilePhone = MobilePhone;
+        OriginalPronouns = Pronouns;
+        OriginalDectPhone = DectPhone;
+        OriginalWorkingDays = WorkingDays;
         IsDirty = false;
         SaveError = null;
+        HasOverride = true;
     }
 
     /// <summary>
@@ -76,6 +143,9 @@ public class EditableUserProfile
         Department = OriginalDepartment;
         BusinessPhone = OriginalBusinessPhone;
         MobilePhone = OriginalMobilePhone;
+        Pronouns = OriginalPronouns;
+        DectPhone = OriginalDectPhone;
+        WorkingDays = OriginalWorkingDays;
         IsDirty = false;
         SaveError = null;
     }

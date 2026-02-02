@@ -1,0 +1,112 @@
+@page "/claims-debug"
+@using Microsoft.AspNetCore.Authorization
+@using System.Security.Claims
+@attribute [Authorize]
+@rendermode InteractiveServer
+
+<PageTitle>Claims Debug</PageTitle>
+
+<div class="container py-4">
+    <h1>Claims Debug</h1>
+    <p class="text-muted">This page shows all claims in your authentication token.</p>
+
+    <AuthorizeView>
+        <Authorized Context="authContext">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <strong>User:</strong> @authContext.User.Identity?.Name
+                </div>
+                <div class="card-body">
+                    <h5>Admin Policy Check</h5>
+                    <AuthorizeView Policy="AdminOnly">
+                        <Authorized>
+                            <div class="alert alert-success">
+                                <i class="bi bi-check-circle me-2"></i>You HAVE the AdminOnly policy - you should see admin pages.
+                            </div>
+                        </Authorized>
+                        <NotAuthorized>
+                            <div class="alert alert-warning">
+                                <i class="bi bi-exclamation-triangle me-2"></i>You do NOT have the AdminOnly policy.
+                            </div>
+                        </NotAuthorized>
+                    </AuthorizeView>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <i class="bi bi-search me-2"></i>Looking for Group Claim
+                </div>
+                <div class="card-body">
+                    <p><strong>Expected Group ID:</strong> <code>f1d71bd2-1dfa-4f15-a9b8-bb3aee6f81f0</code></p>
+
+                    @{
+                        var groupClaims = authContext.User.Claims.Where(c =>
+                            c.Type == "groups" ||
+                            c.Type == "http://schemas.microsoft.com/ws/2008/06/identity/claims/groups" ||
+                            c.Type.Contains("group", StringComparison.OrdinalIgnoreCase)).ToList();
+                    }
+
+                    @if (groupClaims.Any())
+                    {
+                        <div class="alert alert-info">
+                            <strong>Found @groupClaims.Count group claim(s):</strong>
+                            <ul class="mb-0 mt-2">
+                                @foreach (var claim in groupClaims)
+                                {
+                                    var isMatch = claim.Value == "f1d71bd2-1dfa-4f15-a9b8-bb3aee6f81f0";
+                                    <li>
+                                        <code>@claim.Type</code> = <code class="@(isMatch ? "text-success fw-bold" : "")">@claim.Value</code>
+                                        @if (isMatch)
+                                        {
+                                            <span class="badge bg-success ms-2">MATCH!</span>
+                                        }
+                                    </li>
+                                }
+                            </ul>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="alert alert-danger">
+                            <i class="bi bi-x-circle me-2"></i><strong>No group claims found!</strong>
+                            <p class="mb-0 mt-2">You need to configure group claims in Entra ID:</p>
+                            <ol class="mb-0 mt-2">
+                                <li>Azure Portal → App registrations → Your app</li>
+                                <li>Token configuration → Add groups claim</li>
+                                <li>Select "Security groups" and "Group ID"</li>
+                                <li>Sign out and back in</li>
+                            </ol>
+                        </div>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <i class="bi bi-list-ul me-2"></i>All Claims (@authContext.User.Claims.Count())
+                </div>
+                <div class="card-body p-0">
+                    <table class="table table-sm table-striped mb-0">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var claim in authContext.User.Claims.OrderBy(c => c.Type))
+                            {
+                                <tr>
+                                    <td><code style="font-size: 0.8em;">@claim.Type</code></td>
+                                    <td style="word-break: break-all;">@claim.Value</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </Authorized>
+    </AuthorizeView>
+</div>
+
