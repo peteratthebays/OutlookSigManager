@@ -202,6 +202,7 @@ public class UserOverrideStorageService : IUserOverrideStorageService, IDisposab
                 userOverride.OverrideMobilePhone);
 
             _overrides.Upsert(userOverride);
+            _database.Checkpoint();  // Force WAL to flush to main database file
             _logger.LogInformation("Saved overrides for user {UserId}", userOverride.UserId);
         }
         catch (Exception ex)
@@ -220,6 +221,7 @@ public class UserOverrideStorageService : IUserOverrideStorageService, IDisposab
             var deleted = _overrides.Delete(userId);
             if (deleted)
             {
+                _database.Checkpoint();  // Force WAL to flush to main database file
                 _logger.LogInformation("Deleted overrides for user {UserId}", userId);
             }
             return Task.FromResult(deleted);

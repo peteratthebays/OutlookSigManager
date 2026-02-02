@@ -91,6 +91,19 @@ builder.Services.AddRazorComponents()
 
 var app = builder.Build();
 
+// Ensure LiteDB is properly disposed on shutdown (singletons aren't auto-disposed)
+var lifetime = app.Services.GetRequiredService<IHostApplicationLifetime>();
+lifetime.ApplicationStopping.Register(() =>
+{
+    var logger = app.Services.GetService<ILogger<Program>>();
+    logger?.LogInformation("Application stopping - disposing database services");
+
+    var dbService = app.Services.GetService<OutlookSigManager.Services.IUserOverrideStorageService>();
+    (dbService as IDisposable)?.Dispose();
+
+    logger?.LogInformation("Database services disposed successfully");
+});
+
 app.MapDefaultEndpoints();
 
 // Configure the HTTP request pipeline.
