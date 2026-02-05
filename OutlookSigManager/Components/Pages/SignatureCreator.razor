@@ -42,8 +42,8 @@
     }
     else
     {
-        <div class="row">
-            <div class="col-lg-4 col-xl-3">
+        <div class="row flex-nowrap">
+            <div class="col-lg-5 col-xl-4" style="min-width: 480px;">
                 <UserProfileForm User="@CurrentUser"
                                 Overrides="@FieldOverrides"
                                 OverridesChanged="@OnOverridesChanged"
@@ -53,7 +53,7 @@
                                 SaveSuccess="@SaveSuccess"
                                 SaveError="@SaveError" />
             </div>
-            <div class="col-lg-8 col-xl-9">
+            <div class="col-lg-7 col-xl-8">
                 <div class="sticky-top" style="top: 20px;">
                     <SignaturePreview User="@EffectiveUser"
                                      Overrides="@FieldOverrides" />

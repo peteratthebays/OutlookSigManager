@@ -1,42 +1,48 @@
 @using Microsoft.AspNetCore.Components.Authorization
 
-<div class="top-row ps-3 navbar navbar-dark">
+<div class="top-row ps-3 navbar navbar-dark @(IsCollapsed ? "collapsed" : "")">
     <div class="container-fluid">
-        <a class="navbar-brand" href="">
-            Baysig
-        </a>
+        @if (!IsCollapsed)
+        {
+            <a class="navbar-brand" href="">
+                Baysig
+            </a>
+        }
+        <button class="sidebar-toggle-btn" @onclick="OnToggle" title="@(IsCollapsed ? "Expand menu" : "Collapse menu")">
+            <span class="bi @(IsCollapsed ? "bi-chevron-right" : "bi-chevron-left")" aria-hidden="true"></span>
+        </button>
     </div>
 </div>
 
 <input type="checkbox" title="Navigation menu" class="navbar-toggler" />
 
-<div class="nav-scrollable" onclick="document.querySelector('.navbar-toggler').click()">
+<div class="nav-scrollable @(IsCollapsed ? "collapsed" : "")" onclick="document.querySelector('.navbar-toggler').click()">
     <nav class="nav flex-column">
         <AuthorizeView>
             <Authorized>
                 <!-- Signature Creator - Available to all authenticated users -->
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-pen-fill" aria-hidden="true"></span> Signature Creator
+                        <span class="bi bi-pen-fill" aria-hidden="true"></span><span class="nav-text">Signature Creator</span>
                     </NavLink>
                 </div>
 
                 <!-- Admin Section -->
                 <AuthorizeView Policy="AdminOnly">
                     <Authorized Context="adminContext">
-                        <div class="nav-item px-3 mt-3">
+                        <div class="nav-item px-3 mt-3 admin-header">
                             <small class="text-muted text-uppercase">Admin</small>
                         </div>
 
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="user-audit">
-                                <span class="bi bi-people-fill" aria-hidden="true"></span> User Audit
+                                <span class="bi bi-people-fill" aria-hidden="true"></span><span class="nav-text">User Audit</span>
                             </NavLink>
                         </div>
 
                         <div class="nav-item px-3">
                             <NavLink class="nav-link" href="template-designer">
-                                <span class="bi bi-palette-fill" aria-hidden="true"></span> Template Designer
+                                <span class="bi bi-palette-fill" aria-hidden="true"></span><span class="nav-text">Template Designer</span>
                             </NavLink>
                         </div>
                     </Authorized>
@@ -45,10 +51,18 @@
             <NotAuthorized>
                 <div class="nav-item px-3">
                     <NavLink class="nav-link" href="" Match="NavLinkMatch.All">
-                        <span class="bi bi-house-door-fill" aria-hidden="true"></span> Home
+                        <span class="bi bi-house-door-fill" aria-hidden="true"></span><span class="nav-text">Home</span>
                     </NavLink>
                 </div>
             </NotAuthorized>
         </AuthorizeView>
     </nav>
 </div>
+
+@code {
+    [Parameter]
+    public EventCallback OnToggle { get; set; }
+
+    [Parameter]
+    public bool IsCollapsed { get; set; }
+}
