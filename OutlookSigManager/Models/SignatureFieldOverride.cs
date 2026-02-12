@@ -12,22 +12,33 @@ public class SignatureFieldOverride
     public string? DectPhone { get; set; }  // Internal DECT phone number
 
     /// <summary>
+    /// Field IDs the user has explicitly chosen to hide from their signature,
+    /// even when the field has a value in Entra.
+    /// </summary>
+    public HashSet<string> HiddenFields { get; set; } = new(StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>
     /// Applies overrides to a user profile, returning effective values.
+    /// Hidden fields are set to null so the renderer skips them.
     /// </summary>
     public UserProfile ApplyToProfile(UserProfile baseProfile)
     {
         return baseProfile with
         {
             DisplayName = !string.IsNullOrWhiteSpace(OverrideName) ? OverrideName : baseProfile.DisplayName,
-            JobTitle = !string.IsNullOrWhiteSpace(OverrideJobTitle) ? OverrideJobTitle : baseProfile.JobTitle,
-            Department = !string.IsNullOrWhiteSpace(OverrideDepartment) ? OverrideDepartment : baseProfile.Department,
-            BusinessPhone = !string.IsNullOrWhiteSpace(OverrideBusinessPhone) ? OverrideBusinessPhone : baseProfile.BusinessPhone,
-            MobilePhone = !string.IsNullOrWhiteSpace(OverrideMobilePhone) ? OverrideMobilePhone : baseProfile.MobilePhone
+            JobTitle = HiddenFields.Contains("jobTitle") ? null
+                : !string.IsNullOrWhiteSpace(OverrideJobTitle) ? OverrideJobTitle : baseProfile.JobTitle,
+            Department = HiddenFields.Contains("department") ? null
+                : !string.IsNullOrWhiteSpace(OverrideDepartment) ? OverrideDepartment : baseProfile.Department,
+            BusinessPhone = HiddenFields.Contains("businessPhone") ? null
+                : !string.IsNullOrWhiteSpace(OverrideBusinessPhone) ? OverrideBusinessPhone : baseProfile.BusinessPhone,
+            MobilePhone = HiddenFields.Contains("mobilePhone") ? null
+                : !string.IsNullOrWhiteSpace(OverrideMobilePhone) ? OverrideMobilePhone : baseProfile.MobilePhone
         };
     }
 
     /// <summary>
-    /// Returns true if any override has a value.
+    /// Returns true if any override has a value or any fields are hidden.
     /// </summary>
     public bool HasOverrides()
     {
@@ -38,11 +49,12 @@ public class SignatureFieldOverride
                !string.IsNullOrWhiteSpace(OverrideMobilePhone) ||
                !string.IsNullOrWhiteSpace(WorkingDays) ||
                !string.IsNullOrWhiteSpace(Pronouns) ||
-               !string.IsNullOrWhiteSpace(DectPhone);
+               !string.IsNullOrWhiteSpace(DectPhone) ||
+               HiddenFields.Count > 0;
     }
 
     /// <summary>
-    /// Clears all override values.
+    /// Clears all override values and hidden fields.
     /// </summary>
     public void Clear()
     {
@@ -54,6 +66,7 @@ public class SignatureFieldOverride
         WorkingDays = null;
         Pronouns = null;
         DectPhone = null;
+        HiddenFields.Clear();
     }
 
     /// <summary>

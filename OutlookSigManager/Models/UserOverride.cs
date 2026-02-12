@@ -55,6 +55,11 @@ public class UserOverride
     public string? DectPhone { get; set; }
 
     /// <summary>
+    /// Field IDs the user has explicitly hidden from their signature.
+    /// </summary>
+    public List<string> HiddenFields { get; set; } = new();
+
+    /// <summary>
     /// Last modified timestamp.
     /// </summary>
     public DateTime LastModified { get; set; } = DateTime.UtcNow;
@@ -73,7 +78,8 @@ public class UserOverride
             OverrideMobilePhone = OverrideMobilePhone,
             WorkingDays = WorkingDays,
             Pronouns = Pronouns,
-            DectPhone = DectPhone
+            DectPhone = DectPhone,
+            HiddenFields = new HashSet<string>(HiddenFields ?? [], StringComparer.OrdinalIgnoreCase)
         };
     }
 
@@ -90,6 +96,7 @@ public class UserOverride
         WorkingDays = overrides.WorkingDays;
         Pronouns = overrides.Pronouns;
         DectPhone = overrides.DectPhone;
+        HiddenFields = overrides.HiddenFields.ToList();
         LastModified = DateTime.UtcNow;
     }
 
@@ -105,6 +112,7 @@ public class UserOverride
                !string.IsNullOrWhiteSpace(OverrideMobilePhone) ||
                !string.IsNullOrWhiteSpace(WorkingDays) ||
                !string.IsNullOrWhiteSpace(Pronouns) ||
-               !string.IsNullOrWhiteSpace(DectPhone);
+               !string.IsNullOrWhiteSpace(DectPhone) ||
+               (HiddenFields?.Count > 0);
     }
 }

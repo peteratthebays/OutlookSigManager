@@ -78,40 +78,120 @@
                 <small class="text-muted">Appears after your name, e.g., "Jane Smith (She/Her)"</small>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Job Title Override</label>
-                <input type="text"
-                       class="form-control"
-                       placeholder="@(User?.JobTitle ?? "Your job title")"
-                       @bind="Overrides.OverrideJobTitle"
-                       @bind:event="oninput"
-                       @bind:after="NotifyChanged" />
+                <div class="d-flex justify-content-between align-items-center">
+                    <label class="form-label mb-0">Job Title Override</label>
+                    @if (!string.IsNullOrWhiteSpace(User?.JobTitle))
+                    {
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="show-jobTitle"
+                                   checked="@(!IsFieldHidden("jobTitle"))"
+                                   @onchange="@(e => ToggleFieldVisibility("jobTitle", e))" />
+                            <label class="form-check-label small text-muted" for="show-jobTitle">Show</label>
+                        </div>
+                    }
+                </div>
+                @if (IsFieldHidden("jobTitle"))
+                {
+                    <input type="text" class="form-control" disabled placeholder="Hidden from signature" />
+                    <small class="text-muted fst-italic">This field will not appear in your signature</small>
+                }
+                else
+                {
+                    <input type="text"
+                           class="form-control"
+                           placeholder="@(User?.JobTitle ?? "Your job title")"
+                           @bind="Overrides.OverrideJobTitle"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChanged" />
+                }
             </div>
             <div class="col-md-6">
-                <label class="form-label">Department Override</label>
-                <input type="text"
-                       class="form-control"
-                       placeholder="@(User?.Department ?? "Your department")"
-                       @bind="Overrides.OverrideDepartment"
-                       @bind:event="oninput"
-                       @bind:after="NotifyChanged" />
+                <div class="d-flex justify-content-between align-items-center">
+                    <label class="form-label mb-0">Department Override</label>
+                    @if (!string.IsNullOrWhiteSpace(User?.Department))
+                    {
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="show-department"
+                                   checked="@(!IsFieldHidden("department"))"
+                                   @onchange="@(e => ToggleFieldVisibility("department", e))" />
+                            <label class="form-check-label small text-muted" for="show-department">Show</label>
+                        </div>
+                    }
+                </div>
+                @if (IsFieldHidden("department"))
+                {
+                    <input type="text" class="form-control" disabled placeholder="Hidden from signature" />
+                    <small class="text-muted fst-italic">This field will not appear in your signature</small>
+                }
+                else
+                {
+                    <input type="text"
+                           class="form-control"
+                           placeholder="@(User?.Department ?? "Your department")"
+                           @bind="Overrides.OverrideDepartment"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChanged" />
+                }
             </div>
             <div class="col-md-6">
-                <label class="form-label">Business Phone Override</label>
-                <input type="text"
-                       class="form-control"
-                       placeholder="@(User?.BusinessPhone ?? "Phone number")"
-                       @bind="Overrides.OverrideBusinessPhone"
-                       @bind:event="oninput"
-                       @bind:after="NotifyChanged" />
+                <div class="d-flex justify-content-between align-items-center">
+                    <label class="form-label mb-0">Business Phone Override</label>
+                    @if (!string.IsNullOrWhiteSpace(User?.BusinessPhone))
+                    {
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="show-businessPhone"
+                                   checked="@(!IsFieldHidden("businessPhone"))"
+                                   @onchange="@(e => ToggleFieldVisibility("businessPhone", e))" />
+                            <label class="form-check-label small text-muted" for="show-businessPhone">Show</label>
+                        </div>
+                    }
+                </div>
+                @if (IsFieldHidden("businessPhone"))
+                {
+                    <input type="text" class="form-control" disabled placeholder="Hidden from signature" />
+                    <small class="text-muted fst-italic">This field will not appear in your signature</small>
+                }
+                else
+                {
+                    <input type="text"
+                           class="form-control"
+                           placeholder="@(User?.BusinessPhone ?? "Phone number")"
+                           @bind="Overrides.OverrideBusinessPhone"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChanged" />
+                }
             </div>
             <div class="col-md-6">
-                <label class="form-label">Mobile Phone Override</label>
-                <input type="text"
-                       class="form-control"
-                       placeholder="@(User?.MobilePhone ?? "Mobile number")"
-                       @bind="Overrides.OverrideMobilePhone"
-                       @bind:event="oninput"
-                       @bind:after="NotifyChanged" />
+                <div class="d-flex justify-content-between align-items-center">
+                    <label class="form-label mb-0">Mobile Phone Override</label>
+                    @if (!string.IsNullOrWhiteSpace(User?.MobilePhone))
+                    {
+                        <div class="form-check form-switch mb-0">
+                            <input class="form-check-input" type="checkbox" role="switch"
+                                   id="show-mobilePhone"
+                                   checked="@(!IsFieldHidden("mobilePhone"))"
+                                   @onchange="@(e => ToggleFieldVisibility("mobilePhone", e))" />
+                            <label class="form-check-label small text-muted" for="show-mobilePhone">Show</label>
+                        </div>
+                    }
+                </div>
+                @if (IsFieldHidden("mobilePhone"))
+                {
+                    <input type="text" class="form-control" disabled placeholder="Hidden from signature" />
+                    <small class="text-muted fst-italic">This field will not appear in your signature</small>
+                }
+                else
+                {
+                    <input type="text"
+                           class="form-control"
+                           placeholder="@(User?.MobilePhone ?? "Mobile number")"
+                           @bind="Overrides.OverrideMobilePhone"
+                           @bind:event="oninput"
+                           @bind:after="NotifyChanged" />
+                }
             </div>
             <div class="col-md-6">
                 <label class="form-label">DECT Phone</label>
@@ -184,6 +264,30 @@
     [Parameter] public bool IsSaving { get; set; }
     [Parameter] public bool SaveSuccess { get; set; }
     [Parameter] public string? SaveError { get; set; }
+
+    private bool IsFieldHidden(string fieldId) => Overrides.HiddenFields.Contains(fieldId);
+
+    private async Task ToggleFieldVisibility(string fieldId, ChangeEventArgs e)
+    {
+        var show = (bool)(e.Value ?? true);
+        if (show)
+        {
+            Overrides.HiddenFields.Remove(fieldId);
+        }
+        else
+        {
+            Overrides.HiddenFields.Add(fieldId);
+            // Clear any override value for this field since it's now hidden
+            switch (fieldId.ToLowerInvariant())
+            {
+                case "jobtitle": Overrides.OverrideJobTitle = null; break;
+                case "department": Overrides.OverrideDepartment = null; break;
+                case "businessphone": Overrides.OverrideBusinessPhone = null; break;
+                case "mobilephone": Overrides.OverrideMobilePhone = null; break;
+            }
+        }
+        await NotifyChanged();
+    }
 
     private async Task NotifyChanged()
     {
